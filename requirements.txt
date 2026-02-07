@@ -1,0 +1,11 @@
+streamlit>=1.15
+pillow
+pdfplumber
+pytest
+reportlab
+requests
+
+# Optional (for embedding-based RAG):
+# sentence-transformers
+# numpy
+# faiss-cpu

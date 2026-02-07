@@ -1,0 +1,17 @@
+{
+  "420": {
+    "bns_section": "BNS 318",
+    "notes": "Cheating mapping; penalties similar but reorganized",
+    "source": "mapping_db.json"
+  },
+  "302": {
+    "bns_section": "BNS 501",
+    "notes": "Homicide mapping stub",
+    "source": "mapping_db.json"
+  },
+  "378": {
+    "bns_section": "BNS 410",
+    "notes": "Theft mapping stub",
+    "source": "mapping_db.json"
+  }
+}

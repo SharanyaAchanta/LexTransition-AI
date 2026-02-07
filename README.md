@@ -41,3 +41,44 @@ LexTransition-AI/
 ⚙️ Installation & Local Setup
 1.Clone the repo
 2.Install Local Dependencies
+
+## Current Implementation Status
+- Streamlit UI (app.py) — implemented (interactive pages for Mapper, OCR, Fact-check).
+- OCR — local helper supporting EasyOCR and pytesseract (install system tesseract for pytesseract).
+- IPC→BNS Mapping — in-memory mapping with fuzzy match; UI supports adding mappings at runtime.
+- Grounded Fact-Check — simple PDF ingestion and page-level keyword search using pdfplumber (add PDFs to ./law_pdfs via UI).
+- RAG/LLM & full offline guarantees — NOT implemented yet (placeholders/stubs present).
+
+## Quick Start (local)
+1. Install Python dependencies:
+   pip install -r requirements.txt
+2. (Optional) Install Tesseract binary for pytesseract:
+   - Ubuntu: sudo apt install tesseract-ocr
+   - Mac (brew): brew install tesseract
+3. Launch:
+   streamlit run app.py
+4. To use Grounded Fact-Check, upload law PDFs in the Fact-Check page (or drop them into ./law_pdfs) and click "Verify with Law PDFs".
+
+## Persistence & Testing
+- Mappings are persisted to mapping_db.json (in project root). You can add mappings in the UI; they are saved to this file.
+- Run tests:
+  pip install -r requirements.txt
+  pytest -q
+
+## Optional features (embeddings & local LLM)
+- Embedding-based RAG (FAISS + sentence-transformers)
+  - Install (optional): pip install sentence-transformers numpy faiss-cpu
+  - Enable: export LTA_USE_EMBEDDINGS=1
+  - Index persists in ./vector_store
+- Local LLM integration (Ollama)
+  - Configure: export LTA_OLLAMA_URL=http://localhost:11434
+  - The app will use this endpoint for better plain-language summaries.
+
+## CI
+- A GitHub Actions workflow (lextransition-ci.yml) runs pytest for the project on PRs.
+
+## Next Steps / TODO
+- Replace page-level keyword search with embeddings + vector store (Chroma/FAISS) + exact citation offsets.
+- Add persistent mapping DB + import tools for official IPC→BNS mappings.
+- Integrate local LLM for summaries/explanations (Ollama / LM Studio).
+- Add tests and CI for engine modules.
