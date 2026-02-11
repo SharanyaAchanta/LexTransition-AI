@@ -299,7 +299,16 @@ elif current_page == "Mapper":
                     st.info("Opening comparison view...")
                 if st.button("View Legal Text", key="view_legal_text"):
                     st.info("Opening legal text viewer...")
-                
+
+                # Summarize button
+                if st.button("📝 Summarize", key="summarize_mapping"):
+                    summary_text = llm_summarize(notes, question=f"What are the key changes from IPC {ipc} to BNS {bns}?")
+                    if summary_text:
+                        with st.expander("📝 Plain-Language Summary"):
+                            st.markdown(summary_text)
+                    else:
+                        st.warning("Summary unavailable. LLM not configured or failed.")
+
                 st.divider()
             else:
                 st.warning("⚠️ Section not found in mapping")
@@ -358,8 +367,8 @@ elif current_page == "OCR":
                     # Try LLM summary
                     summary = llm_summarize(extracted, question="What actions should the user take?")
                     if summary:
-                        st.markdown("### Simplified Action Item")
-                        st.markdown(f"_{summary}_")
+                        with st.expander("📝 Simplified Action Item"):
+                            st.markdown(summary)
                 else:
                     st.code("NOTICE UNDER SECTION 41A CrPC...", language="text")
                     st.markdown("**Simplified Action Item:** The police want you to join the investigation. No immediate arrest required.")
@@ -411,9 +420,8 @@ elif current_page == "Fact":
                 combined = "\n\n".join([line for line in res.split("\n") if line.startswith(">   > _")])
                 summary = llm_summarize(combined, question=user_question)
                 if summary:
-                    st.divider()
-                    st.markdown("### Summary (Plain Language)")
-                    st.markdown(f"_{summary}_")
+                    with st.expander("📝 Summary (Plain Language)"):
+                        st.markdown(summary)
             else:
                 st.info("ℹ️ No citations found. Add PDFs to law_pdfs/ folder to enable search.")
         else:
