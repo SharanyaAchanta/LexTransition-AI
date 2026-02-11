@@ -1,0 +1,31 @@
+# --- Critical Additions ---
+.git/
+.github/
+.gitignore
+Dockerfile
+
+# --- Python Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+
+# --- Local App Data ---
+law_pdfs/*
+!law_pdfs/.gitkeep
+vector_store/*
+!vector_store/.gitkeep
+models/*
+!models/.gitkeep
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+.vscode/

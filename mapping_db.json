@@ -1,17 +1,542 @@
 {
-  "420": {
-    "bns_section": "BNS 318",
-    "notes": "Cheating mapping; penalties similar but reorganized",
-    "source": "mapping_db.json"
+  "_metadata": {
+    "description": "IPC (Indian Penal Code, 1860) to BNS (Bharatiya Nyaya Sanhita, 2023) mapping database",
+    "version": "1.0.0",
+    "last_updated": "2026-02-10",
+    "total_mappings": 65,
+    "sources": [
+      "Ministry of Home Affairs, Government of India",
+      "The Bharatiya Nyaya Sanhita, 2023 (Act No. 45 of 2023)",
+      "Official Gazette of India"
+    ],
+    "contributors": ["Savani Thakur"],
+    "categories": [
+      "Offenses Against State",
+      "Offenses Against Public Tranquility",
+      "Offenses Against Human Body",
+      "Offenses Against Property",
+      "Criminal Breach of Trust & Cheating",
+      "Offenses Against Women",
+      "Offenses Relating to Documents",
+      "Offenses Against Public Justice",
+      "Miscellaneous Offenses"
+    ]
+  },
+
+  "107": {
+    "bns_section": "BNS 108",
+    "notes": "Abetment of an offense - Definition and scope remain similar",
+    "category": "General Exceptions & Abetment",
+    "source": "Official Gazette"
+  },
+  "109": {
+    "bns_section": "BNS 110",
+    "notes": "Punishment of abetment if the act abetted is committed",
+    "category": "General Exceptions & Abetment",
+    "source": "Official Gazette"
+  },
+  "120A": {
+    "bns_section": "BNS 61",
+    "notes": "Criminal conspiracy - Definition retained with similar scope",
+    "category": "Criminal Conspiracy",
+    "source": "Official Gazette"
+  },
+  "120B": {
+    "bns_section": "BNS 62",
+    "notes": "Punishment for criminal conspiracy",
+    "category": "Criminal Conspiracy",
+    "source": "Official Gazette"
+  },
+  "124A": {
+    "bns_section": "BNS 152",
+    "notes": "Sedition replaced with 'Acts endangering sovereignty, unity and integrity of India' - Narrower definition, requires tendency to incite violence or public disorder",
+    "category": "Offenses Against State",
+    "source": "Official Gazette"
+  },
+  "141": {
+    "bns_section": "BNS 189",
+    "notes": "Unlawful assembly - Definition substantially similar",
+    "category": "Offenses Against Public Tranquility",
+    "source": "Official Gazette"
+  },
+  "144": {
+    "bns_section": "BNS 192",
+    "notes": "Joining unlawful assembly armed with deadly weapon",
+    "category": "Offenses Against Public Tranquility",
+    "source": "Official Gazette"
+  },
+  "147": {
+    "bns_section": "BNS 195",
+    "notes": "Rioting - Punishment remains similar",
+    "category": "Offenses Against Public Tranquility",
+    "source": "Official Gazette"
+  },
+  "148": {
+    "bns_section": "BNS 196",
+    "notes": "Rioting armed with deadly weapon - Enhanced provisions",
+    "category": "Offenses Against Public Tranquility",
+    "source": "Official Gazette"
+  },
+  "153A": {
+    "bns_section": "BNS 197",
+    "notes": "Promoting enmity between groups on grounds of religion, race, etc.",
+    "category": "Offenses Against Public Tranquility",
+    "source": "Official Gazette"
+  },
+  "166": {
+    "bns_section": "BNS 220",
+    "notes": "Public servant disobeying law with intent to cause injury",
+    "category": "Offenses by Public Servants",
+    "source": "Official Gazette"
+  },
+  "167": {
+    "bns_section": "BNS 221",
+    "notes": "Public servant framing incorrect document",
+    "category": "Offenses by Public Servants",
+    "source": "Official Gazette"
+  },
+  "168": {
+    "bns_section": "BNS 222",
+    "notes": "Public servant unlawfully engaging in trade",
+    "category": "Offenses by Public Servants",
+    "source": "Official Gazette"
+  },
+  "171B": {
+    "bns_section": "BNS 170",
+    "notes": "Bribery in elections",
+    "category": "Offenses Relating to Elections",
+    "source": "Official Gazette"
+  },
+  "171E": {
+    "bns_section": "BNS 173",
+    "notes": "Punishment for bribery",
+    "category": "Offenses Relating to Elections",
+    "source": "Official Gazette"
+  },
+  "193": {
+    "bns_section": "BNS 229",
+    "notes": "False evidence - Punishment structure similar",
+    "category": "Offenses Against Public Justice",
+    "source": "Official Gazette"
+  },
+  "195": {
+    "bns_section": "BNS 231",
+    "notes": "Giving or fabricating false evidence to procure conviction",
+    "category": "Offenses Against Public Justice",
+    "source": "Official Gazette"
+  },
+  "201": {
+    "bns_section": "BNS 238",
+    "notes": "Causing disappearance of evidence or giving false information",
+    "category": "Offenses Against Public Justice",
+    "source": "Official Gazette"
+  },
+  "211": {
+    "bns_section": "BNS 248",
+    "notes": "False charge of offense made with intent to injure",
+    "category": "Offenses Against Public Justice",
+    "source": "Official Gazette"
+  },
+  "224": {
+    "bns_section": "BNS 262",
+    "notes": "Resistance or obstruction to lawful apprehension",
+    "category": "Offenses Against Public Justice",
+    "source": "Official Gazette"
+  },
+  "228A": {
+    "bns_section": "BNS 73",
+    "notes": "Disclosure of identity of victim of certain offenses - Protection enhanced",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "268": {
+    "bns_section": "BNS 270",
+    "notes": "Public nuisance",
+    "category": "Offenses Affecting Public Health",
+    "source": "Official Gazette"
+  },
+  "269": {
+    "bns_section": "BNS 271",
+    "notes": "Negligent act likely to spread infection of disease dangerous to life",
+    "category": "Offenses Affecting Public Health",
+    "source": "Official Gazette"
+  },
+  "270": {
+    "bns_section": "BNS 272",
+    "notes": "Malignant act likely to spread infection of disease dangerous to life",
+    "category": "Offenses Affecting Public Health",
+    "source": "Official Gazette"
+  },
+  "279": {
+    "bns_section": "BNS 281",
+    "notes": "Rash driving on public way - Penalties enhanced",
+    "category": "Offenses Affecting Public Safety",
+    "source": "Official Gazette"
+  },
+  "292": {
+    "bns_section": "BNS 294",
+    "notes": "Sale of obscene material",
+    "category": "Offenses Relating to Decency",
+    "source": "Official Gazette"
+  },
+  "295A": {
+    "bns_section": "BNS 299",
+    "notes": "Deliberate acts to outrage religious feelings",
+    "category": "Offenses Relating to Religion",
+    "source": "Official Gazette"
+  },
+  "299": {
+    "bns_section": "BNS 100",
+    "notes": "Culpable homicide - Definition refined",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "300": {
+    "bns_section": "BNS 101",
+    "notes": "Murder - Definition and exceptions similar to IPC",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
   },
   "302": {
-    "bns_section": "BNS 501",
-    "notes": "Homicide mapping stub",
-    "source": "mapping_db.json"
+    "bns_section": "BNS 103",
+    "notes": "Punishment for murder - Death or life imprisonment; enhanced for certain categories",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "304": {
+    "bns_section": "BNS 105",
+    "notes": "Culpable homicide not amounting to murder - Punishment structure retained",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "304A": {
+    "bns_section": "BNS 106",
+    "notes": "Death by negligence - Punishment enhanced, includes specific provisions for medical negligence",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "304B": {
+    "bns_section": "BNS 80",
+    "notes": "Dowry death - Minimum punishment increased to 7 years",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "306": {
+    "bns_section": "BNS 108",
+    "notes": "Abetment of suicide - Provisions remain similar",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "307": {
+    "bns_section": "BNS 109",
+    "notes": "Attempt to murder - Punishment structure similar, up to 10 years or life",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "308": {
+    "bns_section": "BNS 110",
+    "notes": "Attempt to commit culpable homicide",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "319": {
+    "bns_section": "BNS 114",
+    "notes": "Hurt - Definition retained",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "320": {
+    "bns_section": "BNS 115",
+    "notes": "Grievous hurt - Eight types listed similar to IPC",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "321": {
+    "bns_section": "BNS 116",
+    "notes": "Voluntarily causing hurt",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "323": {
+    "bns_section": "BNS 118",
+    "notes": "Punishment for voluntarily causing hurt - Up to 1 year or fine up to Rs 10,000",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "324": {
+    "bns_section": "BNS 119",
+    "notes": "Voluntarily causing hurt by dangerous weapons - Up to 3 years",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "325": {
+    "bns_section": "BNS 120",
+    "notes": "Voluntarily causing grievous hurt - Up to 7 years and fine",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "326": {
+    "bns_section": "BNS 121",
+    "notes": "Grievous hurt by dangerous weapons - Up to 10 years and fine",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "354": {
+    "bns_section": "BNS 74",
+    "notes": "Assault or criminal force to woman with intent to outrage modesty - Punishment enhanced to 1-5 years",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "354A": {
+    "bns_section": "BNS 75",
+    "notes": "Sexual harassment - Provisions strengthened",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "354B": {
+    "bns_section": "BNS 76",
+    "notes": "Assault with intent to disrobe woman - 3-7 years",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "354C": {
+    "bns_section": "BNS 77",
+    "notes": "Voyeurism - Provisions retained",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "354D": {
+    "bns_section": "BNS 78",
+    "notes": "Stalking - Punishment up to 3 years for first offense",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "359": {
+    "bns_section": "BNS 135",
+    "notes": "Kidnapping - Two types: from India and from lawful guardianship",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "363": {
+    "bns_section": "BNS 137",
+    "notes": "Punishment for kidnapping - Up to 7 years and fine",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "366": {
+    "bns_section": "BNS 139",
+    "notes": "Kidnapping woman to compel marriage - Up to 10 years and fine",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "370": {
+    "bns_section": "BNS 143",
+    "notes": "Trafficking of persons - Comprehensive provisions with enhanced punishment",
+    "category": "Offenses Against Human Body",
+    "source": "Official Gazette"
+  },
+  "375": {
+    "bns_section": "BNS 63",
+    "notes": "Rape - Definition expanded, marital rape exception modified (age raised to 18)",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "376": {
+    "bns_section": "BNS 64",
+    "notes": "Punishment for rape - Minimum 10 years, may extend to life; death for repeat offenders",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "376A": {
+    "bns_section": "BNS 66",
+    "notes": "Punishment for causing death or vegetative state - Minimum 20 years to death",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "376AB": {
+    "bns_section": "BNS 65",
+    "notes": "Rape of woman under 12 - Minimum 20 years, may extend to death",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "376D": {
+    "bns_section": "BNS 70",
+    "notes": "Gang rape - Minimum 20 years to life imprisonment",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "377": {
+    "bns_section": "Decriminalized",
+    "notes": "Unnatural offenses - Consensual acts between adults decriminalized per Supreme Court; non-consensual acts covered under other sections",
+    "category": "Decriminalized",
+    "source": "Official Gazette"
   },
   "378": {
-    "bns_section": "BNS 410",
-    "notes": "Theft mapping stub",
-    "source": "mapping_db.json"
+    "bns_section": "BNS 303",
+    "notes": "Theft - Definition similar, value-based punishment tiers added",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "379": {
+    "bns_section": "BNS 305",
+    "notes": "Punishment for theft - Up to 3 years or fine or both",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "380": {
+    "bns_section": "BNS 306",
+    "notes": "Theft in dwelling house - Up to 7 years and fine",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "384": {
+    "bns_section": "BNS 308",
+    "notes": "Extortion - Punishment up to 3 years or fine or both",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "390": {
+    "bns_section": "BNS 309",
+    "notes": "Robbery - Definition includes theft with violence or threat",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "392": {
+    "bns_section": "BNS 311",
+    "notes": "Punishment for robbery - Up to 10 years and fine",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "395": {
+    "bns_section": "BNS 310",
+    "notes": "Dacoity - Five or more persons committing robbery",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "397": {
+    "bns_section": "BNS 312",
+    "notes": "Robbery or dacoity with attempt to cause death - Minimum 7 years",
+    "category": "Offenses Against Property",
+    "source": "Official Gazette"
+  },
+  "405": {
+    "bns_section": "BNS 315",
+    "notes": "Criminal breach of trust - Definition retained",
+    "category": "Criminal Breach of Trust",
+    "source": "Official Gazette"
+  },
+  "406": {
+    "bns_section": "BNS 316",
+    "notes": "Punishment for criminal breach of trust - Up to 3 years or fine or both",
+    "category": "Criminal Breach of Trust",
+    "source": "Official Gazette"
+  },
+  "409": {
+    "bns_section": "BNS 317",
+    "notes": "Criminal breach of trust by public servant - Up to 10 years and fine",
+    "category": "Criminal Breach of Trust",
+    "source": "Official Gazette"
+  },
+  "415": {
+    "bns_section": "BNS 318",
+    "notes": "Cheating - Definition includes inducing delivery of property or consent",
+    "category": "Cheating",
+    "source": "Official Gazette"
+  },
+  "417": {
+    "bns_section": "BNS 319",
+    "notes": "Punishment for cheating - Up to 1 year or fine or both",
+    "category": "Cheating",
+    "source": "Official Gazette"
+  },
+  "420": {
+    "bns_section": "BNS 318",
+    "notes": "Cheating and dishonestly inducing delivery of property - Up to 7 years and fine; commonly invoked section for fraud cases",
+    "category": "Cheating",
+    "source": "Official Gazette"
+  },
+  "463": {
+    "bns_section": "BNS 336",
+    "notes": "Forgery - Making false document with intent to cause damage",
+    "category": "Offenses Relating to Documents",
+    "source": "Official Gazette"
+  },
+  "465": {
+    "bns_section": "BNS 338",
+    "notes": "Punishment for forgery - Up to 2 years or fine or both",
+    "category": "Offenses Relating to Documents",
+    "source": "Official Gazette"
+  },
+  "467": {
+    "bns_section": "BNS 340",
+    "notes": "Forgery of valuable security - Up to 10 years and fine",
+    "category": "Offenses Relating to Documents",
+    "source": "Official Gazette"
+  },
+  "468": {
+    "bns_section": "BNS 341",
+    "notes": "Forgery for purpose of cheating - Up to 7 years and fine",
+    "category": "Offenses Relating to Documents",
+    "source": "Official Gazette"
+  },
+  "471": {
+    "bns_section": "BNS 344",
+    "notes": "Using forged document as genuine",
+    "category": "Offenses Relating to Documents",
+    "source": "Official Gazette"
+  },
+  "494": {
+    "bns_section": "BNS 82",
+    "notes": "Bigamy - Marrying again during lifetime of spouse; up to 7 years",
+    "category": "Offenses Relating to Marriage",
+    "source": "Official Gazette"
+  },
+  "498A": {
+    "bns_section": "BNS 85",
+    "notes": "Cruelty by husband or relatives - Up to 3 years and fine",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "499": {
+    "bns_section": "BNS 356",
+    "notes": "Defamation - Definition and exceptions similar",
+    "category": "Defamation",
+    "source": "Official Gazette"
+  },
+  "500": {
+    "bns_section": "BNS 357",
+    "notes": "Punishment for defamation - Up to 2 years or fine or both",
+    "category": "Defamation",
+    "source": "Official Gazette"
+  },
+  "503": {
+    "bns_section": "BNS 351",
+    "notes": "Criminal intimidation - Threat to cause injury",
+    "category": "Criminal Intimidation",
+    "source": "Official Gazette"
+  },
+  "504": {
+    "bns_section": "BNS 352",
+    "notes": "Intentional insult to provoke breach of peace",
+    "category": "Criminal Intimidation",
+    "source": "Official Gazette"
+  },
+  "506": {
+    "bns_section": "BNS 351",
+    "notes": "Criminal intimidation - Up to 2 years or fine; 7 years for death/grievous hurt threats",
+    "category": "Criminal Intimidation",
+    "source": "Official Gazette"
+  },
+  "509": {
+    "bns_section": "BNS 79",
+    "notes": "Word, gesture or act intended to insult modesty of woman - Up to 3 years and fine",
+    "category": "Offenses Against Women",
+    "source": "Official Gazette"
+  },
+  "511": {
+    "bns_section": "BNS 62",
+    "notes": "Attempt to commit offenses punishable with imprisonment for life",
+    "category": "Attempts",
+    "source": "Official Gazette"
   }
 }

@@ -6,6 +6,15 @@ import re
 # Page Configuration
 st.set_page_config(page_title="LexTransition AI", page_icon="⚖️", layout="wide")
 
+# Access the CSS file
+def load_css(file_path):
+    if os.path.exists(file_path):
+        with open(file_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# Load the CSS file
+load_css("assets/styles.css")
+
 # Initialize session state for navigation
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Home"
@@ -73,479 +82,47 @@ def _goto(page: str):
         pass
     st.rerun()
 
-# Custom Styling (Dark Theme with Shiny Background)
-st.markdown("""
-<style>
-/* Background - Textured Shining Black */
-[data-testid="stAppViewContainer"] {
-    background: #000000;
-    position: relative;
-    overflow: hidden;
-    min-height: 100vh;
-    z-index: 0;
-}
+# Header Navigation
+nav_items = [
+    ("Home", "Home"),
+    ("Mapper", "IPC -> BNS Mapper"),
+    ("OCR", "Document OCR"),
+    ("Fact", "Fact Checker"),
+    ("Settings", "Settings / About"),
+]
 
-/* Strong gloss and glass-like texture */
-[data-testid="stAppViewContainer"]::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background:
-        /* soft highlights */
-        radial-gradient(650px 240px at 8% 12%, rgba(255,255,255,0.10), transparent 18%),
-        radial-gradient(600px 220px at 85% 18%, rgba(255,255,255,0.08), transparent 16%),
-        radial-gradient(400px 140px at 50% 30%, rgba(255,255,255,0.05), transparent 30%),
-        /* vertical sheen */
-        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0) 22%),
-        /* subtle diagonal glass streaks */
-        repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, rgba(255,255,255,0) 6px),
-        repeating-linear-gradient(-45deg, rgba(255,255,255,0.008) 0px, rgba(255,255,255,0.008) 1px, rgba(255,255,255,0) 12px),
-        /* faint dot/noise for texture */
-        radial-gradient(rgba(255,255,255,0.004) 1px, transparent 1.5px);
-    opacity: 1;
-    filter: blur(1px) saturate(1);
-    background-size: auto, auto, auto, auto, 14px 14px, 28px 28px, 6px 6px;
-}
+header_links = []
+for page, label in nav_items:
+    page_html = html_lib.escape(page)
+    label_html = html_lib.escape(label)
+    active_class = "active" if st.session_state.current_page == page else ""
+    header_links.append(
+        f'<a class="top-nav-link {active_class}" href="?page={page_html}" target="_self" '
+        f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
+    )
 
-/* Center sheen */
-[data-testid="stAppViewContainer"]::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background: radial-gradient(60% 45% at 50% 28%, rgba(255,255,255,0.08), rgba(0,0,0,0.96));
-    opacity: 0.18;
-    filter: blur(2px);
-}
+st.markdown(
+    f"""
+<!-- Compact fixed site logo -->
+<a class="site-logo" href="?page=Home" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
 
-/* Add thin glass lines near top-left */
-[data-testid="stAppViewContainer"] .glass-stripe {
-    position: absolute;
-    top: 56px;
-    left: 120px;
-    width: 640px;
-    height: 160px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.0));
-    transform: rotate(-6deg);
-    pointer-events: none;
-    opacity: 0.65;
-}
-
-[data-testid="stSidebarNav"] {
-    background: linear-gradient(180deg, rgba(6,6,6,1) 0%, rgba(12,12,12,0.98) 100%);
-    border-right: 1px solid rgba(255,255,255,0.02);
-}
-
-/* Global font */
-* {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', 'Inter', sans-serif;
-    font-weight: 700;
-}
-
-/* Home Page Styling */
-.main-container {
-    max-width: 1000px;
-}
-
-.home-header {
-    margin-bottom: 30px;
-}
-
-.home-title {
-    font-size: 32px;
-    font-weight: 700;
-    color: #ffffff;
-    margin: 0;
-    font-family: 'Poppins', sans-serif;
-    letter-spacing: -0.5px;
-}
-
-.home-subtitle {
-    font-size: 14px;
-    color: #b0b0b0;
-    max-width: 650px;
-    line-height: 1.6;
-    margin-top: 8px;
-    font-weight: 400;
-}
-
-.home-what {
-    font-size: 18px;
-    font-weight: 700;
-    color: #ffffff;
-    margin-top: 28px;
-    margin-bottom: 18px;
-}
-
-/* Home Cards - Compact Black Theme */
-.home-card {
-    background: linear-gradient(145deg, rgba(20, 20, 20, 0.95), rgba(10, 10, 10, 0.7));
-    border: 1px solid rgba(80, 80, 80, 0.25);
-    border-radius: 12px;
-    padding: 22px;
-    min-height: 150px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(8px);
-    position: relative;
-    overflow: hidden;
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-}
-
-.home-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at top right, rgba(100, 100, 100, 0.08), transparent);
-    pointer-events: none;
-}
-
-.home-card:hover {
-    border-color: rgba(150, 150, 150, 0.4);
-    transform: translateY(-6px);
-    background: linear-gradient(145deg, rgba(30, 30, 30, 1), rgba(15, 15, 15, 0.9));
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(100, 100, 100, 0.15);
-    cursor: pointer;
-}
-
-/* make anchor cards behave like blocks and inherit text color */
-a.home-card { text-decoration: none !important; display: block; color: inherit; }
-
-.home-card-icon {
-    font-size: 16px;
-    margin-right: 8px;
-    color: #90ee90;
-}
-
-.home-card-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.home-card-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #ffffff;
-    font-family: 'Poppins', sans-serif;
-    margin: 0;
-}
-
-.home-card-desc {
-    font-size: 13px;
-    color: #cbd5d1;
-    line-height: 1.55;
-    margin-bottom: 14px;
-    flex-grow: 1;
-}
-
-.home-card-btn {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    font-weight: 600;
-    color: #a8f3b0;
-    padding: 8px 0;
-    border-top: 1px solid rgba(80, 80, 80, 0.15);
-    margin-top: 2px;
-    cursor: pointer;
-}
-.home-card-btn span:last-child {
-    font-size: 18px;
-}
-
-/* Compact Home Card (provided design) */
-.home-card-compact {
-    background: linear-gradient(145deg, rgba(18,18,18,0.95), rgba(12,12,12,0.88));
-    border: 1px solid rgba(255,255,255,0.02);
-    border-radius: 12px;
-    padding: 12px 14px;
-    min-height: 100px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: all 0.18s ease;
-}
-
-.home-card-compact:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
-}
-
-.home-card-compact .home-card-header { align-items: flex-start; }
-.home-card-compact .home-card-title { font-size: 14px; font-weight: 700; }
-.home-card-compact .home-card-desc { font-size: 12px; color: #9ea7a2; margin-top: 6px; }
-.home-card-action { height: 44px; display:flex; align-items:center; }
-
-/* Style Streamlit button so it visually matches the small pill button in the design */
-.home-card-compact + .stButton > button {
-    background: linear-gradient(180deg, rgba(28,28,28,0.95), rgba(20,20,20,0.95)) !important;
-    color: #d9e7df !important;
-    border: 1px solid rgba(255,255,255,0.03) !important;
-    padding: 8px 12px !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    height: 36px !important;
-    width: 160px !important;
-    margin-top: -48px !important;
-}
-
-.home-card-compact + .stButton > button:after {
-    content: '›';
-    margin-left: 8px;
-    opacity: 0.85;
-}
-
-/* Result Card (Mapper) */
-.result-card {
-    background: linear-gradient(180deg, rgba(18,18,18,0.98), rgba(10,10,10,0.95));
-    border: 1px solid rgba(80, 120, 90, 0.08);
-    border-radius: 12px;
-    padding: 12px 14px 56px 14px;
-    margin-top: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
-    position: relative;
-} 
-
-.result-badge {
-    display: inline-block;
-    background: rgba(34,139,34,0.10);
-    color: #8ee59b;
-    font-weight: 700;
-    padding: 6px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    margin-bottom: 12px;
-}
-
-.result-grid {
-    display: flex;
-    gap: 18px;
-    margin-bottom: 12px;
-}
-
-.result-col {
-    flex: 1;
-    background: rgba(255,255,255,0.01);
-    border: 1px solid rgba(255,255,255,0.02);
-    padding: 12px 14px;
-    border-radius: 10px;
-    min-height: 64px;
-}
-
-.result-col-title {
-    font-size: 12px;
-    color: #cfeadf;
-    font-weight: 700;
-}
-
-.result-list {
-    margin: 10px 0 12px 18px;
-    color: #bfc9c4;
-}
-
-/* Position actual Streamlit buttons so they visually sit inside the result card */
-.result-card + .stButton {
-    margin-top: -46px;
-    display: inline-block;
-    margin-right: 8px;
-}
-
-.result-card + .stButton > button {
-    background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(17,17,20,0.95)) !important;
-    color: #ffffff !important;
-    border: 1px solid transparent !important;
-    border-image: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04)) 1 !important;
-    padding: 10px 16px !important;
-    border-radius: 10px !important;
-    font-weight: 800 !important;
-    height: 42px !important;
-    letter-spacing: 0.2px !important;
-    box-shadow: none !important;
-}
-
-/* remove glossy pseudo elements */
-.result-card + .stButton > button::before,
-.result-card + .stButton > button::after { content: none !important; }
-
-.result-card + .stButton + .stButton > button {
-    background: linear-gradient(180deg, rgba(28,28,28,0.96), rgba(12,12,12,0.96)) !important;
-    color: #e5e7eb !important;
-    border: 1px solid rgba(255,255,255,0.06) !important;
-    border-radius: 999px !important;
-}
-
-/* make bullets tighter */
-.result-list li { margin-bottom: 6px; }
-
-/* small tweak for small screens */
-@media (max-width: 800px) {
-    .result-grid { flex-direction: column; }
-    .result-card { padding-bottom: 64px; }
-}
-
-/* Sidebar */
-.sidebar-title {
-    color: #ffffff;
-    font-size: 20px;
-    font-weight: 700;
-    font-family: 'Poppins', sans-serif;
-    margin-bottom: 12px;
-}
-
-.sidebar-badge {
-    color: #4ade80;
-    font-size: 12px;
-    font-weight: 600;
-    margin-top: 16px;
-}
-
-/* Column container for cards and buttons */
-[data-testid="column"] {
-    position: relative;
-}
-
-/* Flat-modern buttons (no 3D, crisp underline) */
-.stButton>button {
-    height: 42px;
-    border-radius: 10px;
-    color: #ffffff;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-    font-size: 14px;
-    margin-top: 0;
-    position: relative;
-    z-index: 10;
-    width: auto;
-    padding: 0 18px;
-    background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(17,17,20,0.95));
-    border: 1px solid transparent;
-    border-image: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04)) 1;
-    box-shadow: none;
-    backdrop-filter: saturate(110%);
-    transition: background 0.2s ease, color 0.2s ease;
-    /* underline */
-    background-image:
-      linear-gradient(180deg, rgba(24,24,27,0.95), rgba(17,17,20,0.95)),
-      linear-gradient(90deg, #22c55e, #0ea5e9);
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
-}
-
-/* remove glossy pseudo elements */
-.stButton>button::before, .stButton>button::after { content: none !important; }
-
-.stButton>button:hover {
-    background-image:
-      linear-gradient(180deg, rgba(30,30,34,0.98), rgba(20,20,24,0.98)),
-      linear-gradient(90deg, #34d399, #60a5fa);
-}
-
-.stButton>button:focus-visible {
-    outline: 2px solid #60a5fa;
-    outline-offset: 2px;
-}
-
-.stButton>button:active {
-    transform: translateY(0);
-}
-
-/* Home: full-width glossy CTA in cards */
-.home-card + .stButton > button {
-    width: 100% !important;
-    margin-top: -95px !important;
-    padding: 0 20px !important;
-    height: 46px !important;
-    border-radius: 12px !important;
-    background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(17,17,20,0.95)) !important;
-    color: #ffffff !important;
-    border: 1px solid transparent !important;
-    border-image: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04)) 1 !important;
-    box-shadow: none !important;
-}
-
-.home-card + .stButton > button::before {
-    content: ""; position: absolute; left: 10px; right: 10px; top: 4px; height: 40%; border-radius: 999px; background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.02)); pointer-events:none;
-}
-
-.home-card + .stButton > button::after {
-    content: ""; position: absolute; left: 20px; right: 20px; bottom: -4px; height: 10px; border-radius: 999px; background: radial-gradient(60% 100% at 50% 0%, rgba(255,255,255,0.24), rgba(0,0,0,0)); opacity:0.55; filter: blur(6px);
-}
-
-/* Mapper: container for result, ensures correct layout */
-.mapper-wrap { max-width: 920px; margin: 0 auto; position: relative; }
-
-/* Position result buttons inline and overlay the bottom-right of the card */
-.mapper-wrap .result-card + .stButton {
-    margin-top: -52px;
-    display: inline-block;
-    float: right;
-}
-
-.mapper-wrap .result-card + .stButton > button {
-    width: auto !important;
-    padding: 8px 14px !important;
-    height: 36px !important;
-}
-
-.mapper-wrap .result-card + .stButton + .stButton {
-    margin-right: 10px; /* gap between buttons */
-    float: right;
-}
-
-/* Clear floats after result area */
-.mapper-wrap::after { content: ""; display: block; clear: both; }
-
-/* Text Colors */
-p, span, label {
-    color: #b0b0b0;
-}
-
-h1, h2, h3 {
-    color: #ffffff;
-}
-
-/* Dividers */
-hr {
-    border-color: rgba(100, 100, 100, 0.15);
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# Sidebar Navigation (Dark Theme)
-with st.sidebar:
-    st.markdown('<p class="sidebar-title">⚖️ LexTransition AI</p>', unsafe_allow_html=True)
-    st.info("Offline legal assistant: Mapping IPC to BNS")
-    st.divider()
-    
-    if st.button("🏠 Home", use_container_width=True):
-        _goto("Home")
-    if st.button("🔄 IPC → BNS Mapper", use_container_width=True):
-        _goto("Mapper")
-    if st.button("🖼️ Document OCR", use_container_width=True):
-        _goto("OCR")
-    if st.button("📚 Fact Checker", use_container_width=True):
-        _goto("Fact")
-    if st.button("⚙️ Settings / About", use_container_width=True):
-        _goto("Settings")
-    
-    st.divider()
-    st.markdown('<p class="sidebar-badge">✓ Offline Mode</p>', unsafe_allow_html=True)
-    st.markdown('<p class="sidebar-badge">✓ Privacy First</p>', unsafe_allow_html=True)
+<div class="top-header">
+  <div class="top-header-inner">
+    <div class="top-header-left">
+      <!-- header brand is hidden by CSS; left here for semantics/accessibility -->
+      <a class="top-brand" href="?page=Home" target="_self">LexTransition AI</a>
+    </div>
+    <div class="top-header-center">
+      <div class="top-nav">{''.join(header_links)}</div>
+    </div>
+    <div class="top-header-right">
+      <a class="top-cta" href="?page=Fact" target="_self">Get Started</a>
+    </div>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 # Attempt to import engines (use stubs if missing)
 try:
@@ -702,18 +279,18 @@ elif current_page == "Mapper":
                     <div class="result-grid">
                         <div class="result-col">
                             <div class="result-col-title">IPC Section</div>
-                            <div style="font-size:20px;font-weight:700;color:#ffffff;margin-top:6px;">{ipc_html}</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--text-color);margin-top:6px;">{ipc_html}</div>
                         </div>
                         <div class="result-col">
                             <div class="result-col-title">BNS Section</div>
-                            <div style="font-size:20px;font-weight:700;color:#cfeadf;margin-top:6px;">{bns_html}</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--primary-color);margin-top:6px;">{bns_html}</div>
                         </div>
                     </div>
                     <ul class="result-list">
                         <li>{notes_html}</li>
                         <li>Verify against official text before relying on it</li>
                     </ul>
-                    <div style="position:absolute;left:14px;bottom:14px;font-size:12px;opacity:0.8;color:#bfc9c4;">Source: {source_html}</div>
+                    <div style="position:absolute;left:14px;bottom:14px;font-size:12px;opacity:0.8;color:var(--text-color);">Source: {source_html}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -854,12 +431,17 @@ elif current_page == "Settings":
     st.markdown("**Version:** 1.0.0")
     st.markdown("**License:** Open Source")
     st.markdown("**Privacy:** 100% Offline - No data sent to servers")
-    st.divider()
-    st.markdown("### Search Mode")
-    emb_mode = st.checkbox("Enable semantic vector search for fact-checking (requires restart)", value=bool(os.environ.get("LTA_USE_EMBEDDINGS")))
-    if emb_mode:
-        os.environ["LTA_USE_EMBEDDINGS"] = "1"
-        st.info("Semantic vector search enabled. Restart the app to apply changes.")
-    else:
-        os.environ["LTA_USE_EMBEDDINGS"] = "0"
-        st.info("Using keyword search mode.")
+
+# Footer Bar
+st.markdown(
+    """
+<div class="app-footer">
+  <div class="app-footer-inner">
+    <span class="top-chip">Offline Mode</span>
+    <span class="top-chip">Privacy First</span>
+    <a class="top-credit" href="https://www.flaticon.com/" target="_blank">Icons: Flaticon</a>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)

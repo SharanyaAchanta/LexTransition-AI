@@ -39,8 +39,25 @@ LexTransition-AI/
 
 ## ⚙️ Installation & Local Setup
 
-1. Clone the repo
-2. Install Local Dependencies
+### Option A: Using Docker (Recommended)
+The easiest way to run LexTransition-AI is with Docker. This handles all dependencies (including Tesseract OCR and system libraries) automatically.
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/centiceron/LexTransition-AI.git](https://github.com/centiceron/LexTransition-AI.git)
+   cd LexTransition-AI
+
+2. **Build the Docker Image**
+   ```bash 
+   docker build -t lextransition .
+
+3. **Run the Application**
+   ```bash
+   docker run -p 8501:8501 lextransition
+
+4. Open the App
+   ```bash
+   http://localhost:8501
 
 ## Current Implementation Status
 

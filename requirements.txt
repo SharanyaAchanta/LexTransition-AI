@@ -1,11 +1,17 @@
-streamlit>=1.15
-pillow
-pdfplumber
-pytest
-reportlab
-requests
+streamlit>=1.32.0
+requests>=2.31.0
+pdfplumber>=0.10.0
+Pillow>=10.0.0
+numpy>=1.26.0,<2.0.0
 
-# Optional (for embedding-based RAG):
-sentence-transformers
-numpy
-faiss-cpu
+# --- OCR Engines ---
+easyocr>=1.7.1
+pytesseract>=0.3.10
+
+# --- AI/ML (RAG & Embeddings) ---
+sentence-transformers>=2.5.0
+faiss-cpu>=1.8.0
+
+# --- Testing ---
+pytest>=8.0.0
+reportlab>=4.0.0

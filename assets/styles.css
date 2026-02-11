@@ -1,0 +1,968 @@
+/* 1. Main App Container */
+[data-testid="stAppViewContainer"] {
+  background: #000000;
+  overflow-y: scroll !important;
+  overflow-x: hidden;
+  height: 100vh;
+}
+
+/* 2. The Content Block */
+[data-testid="stMainBlockContainer"] {
+  padding-bottom: 100px;
+  z-index: 1;
+  position: relative;
+}
+
+/* Strong gloss and glass-like texture */
+[data-testid="stAppViewContainer"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+        /* soft highlights */
+    radial-gradient(
+      650px 240px at 8% 12%,
+      rgba(255, 255, 255, 0.1),
+      transparent 18%
+    ),
+    radial-gradient(
+      600px 220px at 85% 18%,
+      rgba(255, 255, 255, 0.08),
+      transparent 16%
+    ),
+    radial-gradient(
+      400px 140px at 50% 30%,
+      rgba(255, 255, 255, 0.05),
+      transparent 30%
+    ),
+    /* vertical sheen */
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0) 22%),
+    /* subtle diagonal glass streaks */
+    repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.012) 0px,
+        rgba(255, 255, 255, 0.012) 1px,
+        rgba(255, 255, 255, 0) 6px
+      ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.008) 0px,
+      rgba(255, 255, 255, 0.008) 1px,
+      rgba(255, 255, 255, 0) 12px
+    ),
+    /* faint dot/noise for texture */
+    radial-gradient(rgba(255, 255, 255, 0.004) 1px, transparent 1.5px);
+  opacity: 1;
+  filter: blur(1px) saturate(1);
+  background-size:
+    auto,
+    auto,
+    auto,
+    auto,
+    14px 14px,
+    28px 28px,
+    6px 6px;
+}
+
+/* Center sheen */
+[data-testid="stAppViewContainer"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    60% 45% at 50% 28%,
+    rgba(255, 255, 255, 0.08),
+    rgba(0, 0, 0, 0.96)
+  );
+  opacity: 0.18;
+  filter: blur(2px);
+}
+
+/* Add thin glass lines near top-left */
+[data-testid="stAppViewContainer"] .glass-stripe {
+  position: absolute;
+  top: 56px;
+  left: 120px;
+  width: 640px;
+  height: 160px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0)
+  );
+  transform: rotate(-6deg);
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+[data-testid="stSidebarNav"] {
+  background: linear-gradient(
+    180deg,
+    rgba(6, 6, 6, 1) 0%,
+    rgba(12, 12, 12, 0.98) 100%
+  );
+  border-right: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+/* Hide Streamlit sidebar; navigation is handled via header tabs. */
+[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"] {
+  display: none !important;
+}
+
+/* Top header navigation */
+.top-header {
+  position: sticky;
+  top: 0.35rem;
+  z-index: 40;
+  margin: 0 0 10px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(16, 20, 36, 0.9),
+    rgba(10, 13, 28, 0.92)
+  );
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+.top-header-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px;
+}
+
+.top-header-left {
+  display: none;
+}
+
+.top-header-center {
+  position: static;
+  justify-self: start;
+  width: auto;
+  min-width: 0;
+}
+
+.top-header-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: max-content;
+}
+
+.top-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.2px;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+/* Fixed compact site logo at top-left (used instead of the header brand) */
+.site-logo {
+  position: fixed !important;
+  top: 18px !important;
+  left: 18px !important;
+  z-index: 999999 !important;
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(10, 14, 24, 0.98) !important;
+  border: 1px solid rgba(96, 165, 250, 0.15);
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 14px;
+  text-decoration: none !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+}
+
+.site-logo .logo-icon {
+  font-size: 20px !important;
+  line-height: 1;
+  display: inline !important;
+  visibility: visible !important;
+}
+
+.site-logo .logo-text {
+  white-space: nowrap;
+  color: #60a5fa !important;
+  font-weight: 800;
+  font-size: 14px;
+  display: inline !important;
+  visibility: visible !important;
+}
+
+/* Ensure the logo is visible above everything */
+.top-header .top-brand {
+  display: none !important;
+}
+
+/* Add left padding to the header to avoid overlap with the fixed logo */
+.top-header {
+  padding-left: 180px;
+  padding-right: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1100px) {
+  .site-logo .logo-text {
+    display: none !important;
+  }
+  .site-logo .logo-icon {
+    display: inline !important;
+    visibility: visible !important;
+  }
+  .site-logo {
+    padding: 10px 12px;
+  }
+  .top-header {
+    padding-left: 70px;
+  }
+}
+
+@media (max-width: 920px) {
+  .site-logo {
+    left: 12px;
+    top: 12px;
+    padding: 8px 10px;
+  }
+  .top-header {
+    padding-left: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-logo {
+    left: 8px;
+    top: 8px;
+    padding: 8px 10px;
+  }
+  .top-header {
+    padding-left: 50px;
+  }
+}
+
+/* Nav: float the nav inside a subtle rounded container and make pills clearer */
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 12, 22, 0.84),
+    rgba(10, 14, 26, 0.92)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  flex-wrap: nowrap;
+  width: auto;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.top-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.top-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: #cbd5e1 !important;
+  text-decoration: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    color 0.12s ease;
+  position: relative;
+}
+
+.top-nav-link:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.045);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+.top-nav-link.active {
+  color: #ffffff !important;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.035),
+    rgba(255, 255, 255, 0.01)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.top-nav-link + .top-nav-link::before {
+  content: "";
+  position: absolute;
+  left: -5px; /* overlap into the gap */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.top-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  text-decoration: none !important;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff !important;
+  background: linear-gradient(
+    180deg,
+    rgba(22, 32, 66, 0.98),
+    rgba(11, 18, 44, 0.98)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.top-cta:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(29, 42, 84, 0.98),
+    rgba(14, 23, 54, 0.98)
+  );
+}
+
+.top-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  color: #d1fae5;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+.top-credit {
+  color: #93c5fd !important;
+  font-size: 12px;
+  text-decoration: none !important;
+}
+
+.top-credit:hover {
+  text-decoration: underline !important;
+}
+
+.app-footer {
+  margin-top: 26px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(
+    180deg,
+    rgba(13, 18, 35, 0.9),
+    rgba(8, 11, 24, 0.92)
+  );
+}
+
+.app-footer-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+}
+
+@media (max-width: 920px) {
+  .top-header-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px;
+  }
+  .top-header-left {
+    min-width: 0;
+  }
+  .top-header-center {
+    width: 100%;
+    max-width: 100%;
+  }
+  .top-header-right {
+    min-width: 0;
+    justify-content: flex-start;
+  }
+  .top-brand {
+    font-size: 17px;
+  }
+  .top-nav {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+  }
+  .top-nav-link {
+    white-space: nowrap;
+  }
+  .top-nav-link.active::after {
+    bottom: -6px;
+  }
+  .top-cta {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .app-footer-inner {
+    justify-content: flex-start;
+  }
+}
+
+/* Global font */
+* {
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Poppins", "Inter", sans-serif;
+  font-weight: 700;
+}
+
+/* Home Page Styling */
+.main-container {
+  max-width: 1000px;
+}
+
+.home-header {
+  margin-bottom: 30px;
+}
+
+.home-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  letter-spacing: -0.5px;
+}
+
+.home-subtitle {
+  font-size: 14px;
+  color: #b0b0b0;
+  max-width: 650px;
+  line-height: 1.6;
+  margin-top: 8px;
+  font-weight: 400;
+}
+
+.home-what {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-top: 28px;
+  margin-bottom: 18px;
+}
+
+/* Home Cards - Compact Black Theme */
+.home-card {
+  background: linear-gradient(
+    145deg,
+    rgba(20, 20, 20, 0.95),
+    rgba(10, 10, 10, 0.7)
+  );
+  border: 1px solid rgba(80, 80, 80, 0.25);
+  border-radius: 12px;
+  padding: 22px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.home-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at top right,
+    rgba(100, 100, 100, 0.08),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.home-card:hover {
+  border-color: rgba(150, 150, 150, 0.4);
+  transform: translateY(-6px);
+  background: linear-gradient(
+    145deg,
+    rgba(30, 30, 30, 1),
+    rgba(15, 15, 15, 0.9)
+  );
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(100, 100, 100, 0.15);
+  cursor: pointer;
+}
+
+/* make anchor cards behave like blocks and inherit text color */
+a.home-card {
+  text-decoration: none !important;
+  display: block;
+  color: inherit;
+}
+
+.home-card-icon {
+  font-size: 16px;
+  margin-right: 8px;
+  color: #90ee90;
+}
+
+.home-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.home-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+}
+
+.home-card-desc {
+  font-size: 13px;
+  color: #cbd5d1;
+  line-height: 1.55;
+  margin-bottom: 14px;
+  flex-grow: 1;
+}
+
+.home-card-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a8f3b0;
+  padding: 8px 0;
+  border-top: 1px solid rgba(80, 80, 80, 0.15);
+  margin-top: 2px;
+  cursor: pointer;
+}
+.home-card-btn span:last-child {
+  font-size: 18px;
+}
+
+/* Compact Home Card (provided design) */
+.home-card-compact {
+  background: linear-gradient(
+    145deg,
+    rgba(18, 18, 18, 0.95),
+    rgba(12, 12, 12, 0.88)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.18s ease;
+}
+
+.home-card-compact:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.home-card-compact .home-card-header {
+  align-items: flex-start;
+}
+.home-card-compact .home-card-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+.home-card-compact .home-card-desc {
+  font-size: 12px;
+  color: #9ea7a2;
+  margin-top: 6px;
+}
+.home-card-action {
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* Style Streamlit button so it visually matches the small pill button in the design */
+.home-card-compact + .stButton > button {
+  background: linear-gradient(
+    180deg,
+    rgba(28, 28, 28, 0.95),
+    rgba(20, 20, 20, 0.95)
+  ) !important;
+  color: #d9e7df !important;
+  border: 1px solid rgba(255, 255, 255, 0.03) !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  height: 36px !important;
+  width: 160px !important;
+  margin-top: -48px !important;
+}
+
+.home-card-compact + .stButton > button:after {
+  content: "›";
+  margin-left: 8px;
+  opacity: 0.85;
+}
+
+/* Result Card (Mapper) */
+.result-card {
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 18, 0.98),
+    rgba(10, 10, 10, 0.95)
+  );
+  border: 1px solid rgba(80, 120, 90, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px 56px 14px;
+  margin-top: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  position: relative;
+}
+
+.result-badge {
+  display: inline-block;
+  background: rgba(34, 139, 34, 0.1);
+  color: #8ee59b;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.result-grid {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.result-col {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  padding: 12px 14px;
+  border-radius: 10px;
+  min-height: 64px;
+}
+
+.result-col-title {
+  font-size: 12px;
+  color: #cfeadf;
+  font-weight: 700;
+}
+
+.result-list {
+  margin: 10px 0 12px 18px;
+  color: #bfc9c4;
+}
+
+/* Position actual Streamlit buttons so they visually sit inside the result card */
+.result-card + .stButton {
+  margin-top: -46px;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.result-card + .stButton > button {
+  background: linear-gradient(
+    180deg,
+    rgba(24, 24, 27, 0.95),
+    rgba(17, 17, 20, 0.95)
+  ) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  border-image: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.04)
+    )
+    1 !important;
+  padding: 10px 16px !important;
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+  height: 42px !important;
+  letter-spacing: 0.2px !important;
+  box-shadow: none !important;
+}
+
+/* remove glossy pseudo elements */
+.result-card + .stButton > button::before,
+.result-card + .stButton > button::after {
+  content: none !important;
+}
+
+.result-card + .stButton + .stButton > button {
+  background: linear-gradient(
+    180deg,
+    rgba(28, 28, 28, 0.96),
+    rgba(12, 12, 12, 0.96)
+  ) !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 999px !important;
+}
+
+/* make bullets tighter */
+.result-list li {
+  margin-bottom: 6px;
+}
+
+/* small tweak for small screens */
+@media (max-width: 800px) {
+  .result-grid {
+    flex-direction: column;
+  }
+  .result-card {
+    padding-bottom: 64px;
+  }
+}
+
+/* Sidebar */
+.sidebar-title {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: "Poppins", sans-serif;
+  margin-bottom: 12px;
+}
+
+.sidebar-badge {
+  color: #4ade80;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+/* Column container for cards and buttons */
+[data-testid="column"] {
+  position: relative;
+}
+
+/* Flat-modern buttons (no 3D, crisp underline) */
+.stButton > button {
+  height: 42px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  font-size: 14px;
+  margin-top: 0;
+  position: relative;
+  z-index: 10;
+  width: auto;
+  padding: 0 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(24, 24, 27, 0.95),
+    rgba(17, 17, 20, 0.95)
+  );
+  border: 1px solid transparent;
+  border-image: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.04)
+    )
+    1;
+  box-shadow: none;
+  backdrop-filter: saturate(110%);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+  /* underline */
+  background-image:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.95), rgba(17, 17, 20, 0.95)),
+    linear-gradient(90deg, #22c55e, #0ea5e9);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* remove glossy pseudo elements */
+.stButton > button::before,
+.stButton > button::after {
+  content: none !important;
+}
+
+.stButton > button:hover {
+  background-image:
+    linear-gradient(180deg, rgba(30, 30, 34, 0.98), rgba(20, 20, 24, 0.98)),
+    linear-gradient(90deg, #34d399, #60a5fa);
+}
+
+.stButton > button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.stButton > button:active {
+  transform: translateY(0);
+}
+
+/* Home: full-width glossy CTA in cards */
+.home-card + .stButton > button {
+  width: 100% !important;
+  margin-top: -95px !important;
+  padding: 0 20px !important;
+  height: 46px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(
+    180deg,
+    rgba(24, 24, 27, 0.95),
+    rgba(17, 17, 20, 0.95)
+  ) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  border-image: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.04)
+    )
+    1 !important;
+  box-shadow: none !important;
+}
+
+.home-card + .stButton > button::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 4px;
+  height: 40%;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0.02)
+  );
+  pointer-events: none;
+}
+
+.home-card + .stButton > button::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: -4px;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(
+    60% 100% at 50% 0%,
+    rgba(255, 255, 255, 0.24),
+    rgba(0, 0, 0, 0)
+  );
+  opacity: 0.55;
+  filter: blur(6px);
+}
+
+/* Mapper: container for result, ensures correct layout */
+.mapper-wrap {
+  max-width: 920px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Position result buttons inline and overlay the bottom-right of the card */
+.mapper-wrap .result-card + .stButton {
+  margin-top: -52px;
+  display: inline-block;
+  float: right;
+}
+
+.mapper-wrap .result-card + .stButton > button {
+  width: auto !important;
+  padding: 8px 14px !important;
+  height: 36px !important;
+}
+
+.mapper-wrap .result-card + .stButton + .stButton {
+  margin-right: 10px; /* gap between buttons */
+  float: right;
+}
+
+/* Clear floats after result area */
+.mapper-wrap::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+/* Text Colors */
+p,
+span,
+label {
+  color: #b0b0b0;
+}
+
+h1,
+h2,
+h3 {
+  color: #ffffff;
+}
+
+/* Dividers */
+hr {
+  border-color: rgba(100, 100, 100, 0.15);
+}

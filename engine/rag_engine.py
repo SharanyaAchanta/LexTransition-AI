@@ -7,22 +7,32 @@ Usage:
 """
 import os
 import glob
+import streamlit as st
+import numpy as np
 from collections import Counter
 
 try:
-    import pdfplumber  # type: ignore
+    import pdfplumber
 except Exception:
     pdfplumber = None
 
-# Optional embedding dependencies
+# Load the cached model
+@st.cache_resource(show_spinner=False)
+def load_embedding_model():
+    """Loads the SentenceTransformer model into memory only once."""
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+# Check environment config
 _USE_EMB = os.environ.get("LTA_USE_EMBEDDINGS") == "1"
+_EMB_AVAILABLE = False
+
+# Validate dependencies availability
 try:
     if _USE_EMB:
         from sentence_transformers import SentenceTransformer  # type: ignore
-        import numpy as np  # type: ignore
         _EMB_AVAILABLE = True
-    else:
-        _EMB_AVAILABLE = False
+
 except Exception:
     _EMB_AVAILABLE = False
     _USE_EMB = False
@@ -33,26 +43,27 @@ try:
 except Exception:
     _EMB_ENGINE_AVAILABLE = False
 
-_INDEX = []        # page-level index: [{'file','page','text'}]
+_INDEX = []        # page-level index
 _INDEX_LOADED = False
-
-_EMB_INDEX = []    # [{'file','page','text','vec': np.ndarray}]
-_EMB_MODEL = None
+_EMB_INDEX = []    # cached embeddings for current docs
 
 def _ensure_dir(path):
     os.makedirs(path, exist_ok=True)
 
 def index_pdfs(dir_path="law_pdfs"):
-    global _INDEX_LOADED, _INDEX, _EMB_INDEX, _EMB_MODEL
+    global _INDEX_LOADED, _INDEX, _EMB_INDEX
     _ensure_dir(dir_path)
     if pdfplumber is None:
         return False
+        
+    # Standard file reading 
     files = glob.glob(os.path.join(dir_path, "*.pdf"))
     if not files:
         _INDEX_LOADED = True
         _INDEX = []
         _EMB_INDEX = []
         return True
+        
     docs = []
     for f in files:
         try:
@@ -66,26 +77,21 @@ def index_pdfs(dir_path="law_pdfs"):
     _INDEX = docs
     _INDEX_LOADED = True
 
-    # If external embeddings engine is available, build a persistent vector index
-    if os.environ.get("LTA_USE_EMBEDDINGS") == "1" and _EMB_ENGINE_AVAILABLE:
+    # Build Embeddings if enabled
+    if _USE_EMB and _EMB_AVAILABLE:
         try:
-            texts = [d["text"][:1000] for d in _INDEX]  # crop long pages
-            metas = [(d["file"], d["page"], d["text"][:300]) for d in _INDEX]
-            _build_emb_index(texts, metas)
-        except Exception:
-            pass
-
-    # previous in-memory embedding generation retained as fallback
-    if _USE_EMB and _EMB_AVAILABLE and not _EMB_ENGINE_AVAILABLE:
-        try:
-            if _EMB_MODEL is None:
-                _EMB_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+            # --- USE CACHED MODEL HERE ---
+            model = load_embedding_model()
+            
             texts = [d["text"] for d in _INDEX]
-            vecs = _EMB_MODEL.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+            # Generate embeddings using the cached model
+            vecs = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+            
             _EMB_INDEX = []
             for d, v in zip(_INDEX, vecs):
                 _EMB_INDEX.append({"file": d["file"], "page": d["page"], "text": d["text"], "vec": v})
-        except Exception:
+        except Exception as e:
+            print(f"Embedding generation failed: {e}")
             pass
 
     return True
@@ -104,7 +110,9 @@ def _emb_search(query: str, top_k: int = 3):
     if not _EMB_INDEX or not _EMB_AVAILABLE:
         return None
     try:
-        model = _EMB_MODEL or SentenceTransformer("all-MiniLM-L6-v2")
+        # --- USE CACHED MODEL HERE ---
+        model = load_embedding_model()
+        
         qvec = model.encode([query], convert_to_numpy=True)[0]
         scores = []
         for d in _EMB_INDEX:
@@ -113,6 +121,7 @@ def _emb_search(query: str, top_k: int = 3):
             sim = float(np.dot(qvec, vec) / (np.linalg.norm(qvec) * np.linalg.norm(vec) + 1e-9))
             scores.append((sim, d["file"], d["page"], d["text"]))
         scores.sort(key=lambda x: x[0], reverse=True)
+        
         results = scores[:top_k]
         md = ["> **Answer (embedding search, grounded):**\n"]
         for sim, file, page, text in results:
@@ -131,7 +140,7 @@ def search_pdfs(query: str, top_k: int = 3):
     if not query or not query.strip():
         return None
 
-    # Use external embeddings engine if available and enabled
+    # (Keep your existing external engine logic here)
     if os.environ.get("LTA_USE_EMBEDDINGS") == "1" and _EMB_ENGINE_AVAILABLE:
         try:
             emb_res = _emb_search_index(query, top_k=top_k)
@@ -144,17 +153,15 @@ def search_pdfs(query: str, top_k: int = 3):
         except Exception:
             pass
 
-    # then try internal embeddings
+    # Internal embeddings fallback
     if _USE_EMB and _EMB_AVAILABLE:
         emb_res = _emb_search(query, top_k=top_k)
         if emb_res:
             return emb_res
 
-    # Fallback to token-count search
+    # (Keep your token-count fallback here)
     if not _INDEX_LOADED:
-        ok = index_pdfs()
-        if not ok:
-            return None
+        index_pdfs()
     if not _INDEX:
         return None
     q = query.lower().strip()

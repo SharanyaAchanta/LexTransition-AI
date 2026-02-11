@@ -5,27 +5,27 @@ Functions:
 - available_engines() -> list of strings
 """
 import io
+import streamlit as st
 from typing import List
 
-_EASYOCR_READER = None
-
-def _get_easyocr_reader():
-    global _EASYOCR_READER
-    if _EASYOCR_READER is not None:
-        return _EASYOCR_READER
-    import easyocr  # type: ignore
-    _EASYOCR_READER = easyocr.Reader(["en"], gpu=False)
-    return _EASYOCR_READER
+# Load the cached model
+@st.cache_resource(show_spinner=False)
+def load_easyocr_reader():
+    """Loads the heavy OCR model into memory only once."""
+    print("Loading OCR Model into Memory...")
+    import easyocr
+    # gpu=False ensures it runs safely on CPU-only machines/containers
+    return easyocr.Reader(["en"], gpu=False) 
 
 def available_engines() -> List[str]:
     engines = []
     try:
-        import easyocr  # type: ignore
+        import easyocr
         engines.append("easyocr")
     except Exception:
         pass
     try:
-        import pytesseract  # type: ignore
+        import pytesseract
         engines.append("pytesseract")
     except Exception:
         pass
@@ -34,17 +34,22 @@ def available_engines() -> List[str]:
 def extract_text(file_bytes: bytes) -> str:
     # Try EasyOCR first
     try:
-        from PIL import Image  # type: ignore
-        reader = _get_easyocr_reader()
+        from PIL import Image
+        # Get the cached model
+        reader = load_easyocr_reader()
         image = Image.open(io.BytesIO(file_bytes))
         result = reader.readtext(image)
         return " ".join([r[1] for r in result])
-    except Exception:
+    except Exception as e:
+        # 👇 ADD THIS PRINT STATEMENT
+        print(f"EasyOCR Failed: {e}") 
+        
         # Fallback to pytesseract
         try:
-            import pytesseract  # type: ignore
-            from PIL import Image  # type: ignore
+            import pytesseract
+            from PIL import Image
             image = Image.open(io.BytesIO(file_bytes))
             return pytesseract.image_to_string(image)
-        except Exception:
+        except Exception as e2:
+            print(f"Pytesseract Failed: {e2}")
             return "NOTICE UNDER SECTION 41A CrPC... (OCR not configured). Install easyocr/pytesseract & tesseract binary for production."
