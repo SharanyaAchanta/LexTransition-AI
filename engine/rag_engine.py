@@ -145,13 +145,7 @@ def search_pdfs(query: str, top_k: int = 3):
         try:
             emb_res = _emb_search_index(query, top_k=top_k)
             if emb_res:
-                # emb_res: list of (score, file, page, snippet)
-                md = ["> **Answer (embedding search, grounded):**\n"]
-                for score, file, page, snippet in emb_res:
-                    md.append(f"> - **Source:** {file} | **Page:** {page} | **Score:** {score:.3f}\n>   > _{snippet}_\n")
-                return "\n".join(md)
-        except Exception:
-            pass
+                return emb_res
 
     # Internal embeddings fallback
     if _USE_EMB and _EMB_AVAILABLE:
