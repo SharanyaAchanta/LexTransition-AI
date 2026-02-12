@@ -24,6 +24,7 @@ from . import db
 
 _base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _MAPPING_FILE = os.environ.get("LTA_MAPPING_DB") or os.path.join(_base_dir, "mapping_db.json")
+_USE_JSON_MAPPING = bool(os.environ.get("LTA_MAPPING_DB")) and _MAPPING_FILE.lower().endswith(".json")
 
 # Fallback mappings if database file is not available
 _default_mappings = {
@@ -35,9 +36,37 @@ _default_mappings = {
 _mappings = {}
 _metadata = {}
 
+def _load_mappings_from_json() -> None:
+    global _mappings, _metadata
+    if os.path.exists(_MAPPING_FILE):
+        with open(_MAPPING_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        _metadata = data.get("_metadata", {}) if isinstance(data, dict) else {}
+        _mappings = {k: v for k, v in data.items() if k != "_metadata"} if isinstance(data, dict) else {}
+    else:
+        _mappings = _default_mappings.copy()
+        _metadata = {}
+
+def _save_mappings_to_json() -> None:
+    data = {"_metadata": _metadata.copy()}
+    data.update(_mappings)
+    with open(_MAPPING_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
 def _load_mappings():
     """Load mappings from database."""
     global _mappings, _metadata
+    if _USE_JSON_MAPPING:
+        try:
+            _load_mappings_from_json()
+            if not _mappings:
+                _mappings = _default_mappings.copy()
+                _save_mappings_to_json()
+            return
+        except Exception:
+            _mappings = _default_mappings.copy()
+            _metadata = {}
+            return
     try:
         _mappings = db.get_all_mappings()
         _metadata = db.get_metadata()
@@ -97,23 +126,34 @@ def add_mapping(ipc_section: str, bns_section: str, notes: str = "", source: str
         bool: True if added successfully, False if duplicate
     """
     key = str(ipc_section).strip()
+    value = {
+        "bns_section": bns_section,
+        "notes": notes,
+        "source": source,
+        "category": category
+    }
     if persist:
-        success = db.insert_mapping(key, bns_section, notes, source, category)
+        if _USE_JSON_MAPPING:
+            _mappings[key] = value
+            try:
+                _save_mappings_to_json()
+                return True
+            except Exception:
+                return False
+
+        success = db.upsert_mapping(
+            ipc_section=key,
+            bns_section=bns_section,
+            notes=notes,
+            source=source,
+            category=category,
+            actor="ui",
+        )
         if success:
-            _mappings[key] = {
-                "bns_section": bns_section,
-                "notes": notes,
-                "source": source,
-                "category": category
-            }
+            _mappings[key] = value
         return success
     else:
-        _mappings[key] = {
-            "bns_section": bns_section,
-            "notes": notes,
-            "source": source,
-            "category": category
-        }
+        _mappings[key] = value
         return True
 
 
