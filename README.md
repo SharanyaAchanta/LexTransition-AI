@@ -84,6 +84,15 @@ To use Grounded Fact-Check, upload law PDFs in the Fact-Check page (or drop them
   - `pip install -r requirements.txt`
   - `pytest -q`
 
+## CLI Workflows
+
+Run batch tasks without opening Streamlit:
+
+- Map section: `python cli.py map 420`
+- Import mappings: `python cli.py import --file mappings.csv`
+- Search citations: `python cli.py search --query "penalty for cheating" --top-k 3`
+- Runtime diagnostics: `python cli.py diagnostics`
+
 ## Optional features (embeddings & local LLM)
 
 ### Embedding-based RAG (FAISS + sentence-transformers)
