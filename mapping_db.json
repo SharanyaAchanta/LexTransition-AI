@@ -9,7 +9,9 @@
       "The Bharatiya Nyaya Sanhita, 2023 (Act No. 45 of 2023)",
       "Official Gazette of India"
     ],
-    "contributors": ["Savani Thakur"],
+    "contributors": [
+      "Savani Thakur"
+    ],
     "categories": [
       "Offenses Against State",
       "Offenses Against Public Tranquility",
@@ -22,7 +24,6 @@
       "Miscellaneous Offenses"
     ]
   },
-
   "107": {
     "bns_section": "BNS 108",
     "notes": "Abetment of an offense - Definition and scope remain similar",
