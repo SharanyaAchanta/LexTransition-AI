@@ -7,9 +7,11 @@ Usage:
 """
 import os
 import glob
+import re
+import json
+import hashlib
 import streamlit as st
 import numpy as np
-from collections import Counter
 
 try:
     import pdfplumber
@@ -46,53 +48,123 @@ except Exception:
 _INDEX = []        # page-level index
 _INDEX_LOADED = False
 _EMB_INDEX = []    # cached embeddings for current docs
+_LAST_INDEX_STATS = {"processed_files": 0, "reused_files": 0, "deleted_files": 0, "total_docs": 0}
 
 def _ensure_dir(path):
     os.makedirs(path, exist_ok=True)
 
+def _tokenize_query(query: str):
+    # Keep alphanumeric chunks; drop punctuation-only fragments.
+    return [t for t in re.findall(r"[A-Za-z0-9]+", query.lower()) if t]
+
+def _cache_path(dir_path: str) -> str:
+    return os.path.join(dir_path, ".rag_index_cache.json")
+
+def _hash_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def _load_cache(dir_path: str):
+    path = _cache_path(dir_path)
+    if not os.path.exists(path):
+        return {"files": {}}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict) and isinstance(data.get("files"), dict):
+            return data
+    except Exception:
+        pass
+    return {"files": {}}
+
+def _save_cache(dir_path: str, cache: dict):
+    path = _cache_path(dir_path)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False)
+
+def get_index_diagnostics() -> dict:
+    return dict(_LAST_INDEX_STATS)
+
 def index_pdfs(dir_path="law_pdfs"):
-    global _INDEX_LOADED, _INDEX, _EMB_INDEX
+    global _INDEX_LOADED, _INDEX, _EMB_INDEX, _LAST_INDEX_STATS
     _ensure_dir(dir_path)
     if pdfplumber is None:
         return False
-        
-    # Standard file reading 
-    files = glob.glob(os.path.join(dir_path, "*.pdf"))
+
+    files = sorted(glob.glob(os.path.join(dir_path, "*.pdf")))
+    cache = _load_cache(dir_path)
+    cached_files = cache.get("files", {})
+    new_cache = {"files": {}}
+    processed_files = 0
+    reused_files = 0
+
     if not files:
         _INDEX_LOADED = True
         _INDEX = []
         _EMB_INDEX = []
+        _LAST_INDEX_STATS = {
+            "processed_files": 0,
+            "reused_files": 0,
+            "deleted_files": len(cached_files),
+            "total_docs": 0,
+        }
+        _save_cache(dir_path, new_cache)
         return True
-        
+
     docs = []
     for f in files:
+        abs_path = os.path.abspath(f)
+        file_hash = ""
+        try:
+            file_hash = _hash_file(f)
+        except Exception:
+            processed_files += 1
+            continue
+        cached_entry = cached_files.get(abs_path)
+        if cached_entry and cached_entry.get("hash") == file_hash and isinstance(cached_entry.get("docs"), list):
+            reused_files += 1
+            docs.extend(cached_entry["docs"])
+            new_cache["files"][abs_path] = cached_entry
+            continue
+        processed_files += 1
+        file_docs = []
         try:
             with pdfplumber.open(f) as pdf:
                 for i, page in enumerate(pdf.pages, start=1):
                     text = (page.extract_text() or "").strip()
                     if text:
-                        docs.append({"file": os.path.basename(f), "page": i, "text": text})
+                        doc = {"file": os.path.basename(f), "page": i, "text": text}
+                        file_docs.append(doc)
+                        docs.append(doc)
         except Exception:
             continue
+        new_cache["files"][abs_path] = {"hash": file_hash, "docs": file_docs}
+
     _INDEX = docs
     _INDEX_LOADED = True
+    deleted_files = max(0, len(cached_files) - len(new_cache["files"]))
+    _LAST_INDEX_STATS = {
+        "processed_files": processed_files,
+        "reused_files": reused_files,
+        "deleted_files": deleted_files,
+        "total_docs": len(_INDEX),
+    }
+    _save_cache(dir_path, new_cache)
 
     # Build Embeddings if enabled
     if _USE_EMB and _EMB_AVAILABLE:
         try:
-            # --- USE CACHED MODEL HERE ---
             model = load_embedding_model()
-            
             texts = [d["text"] for d in _INDEX]
-            # Generate embeddings using the cached model
             vecs = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
-            
             _EMB_INDEX = []
             for d, v in zip(_INDEX, vecs):
                 _EMB_INDEX.append({"file": d["file"], "page": d["page"], "text": d["text"], "vec": v})
         except Exception as e:
             print(f"Embedding generation failed: {e}")
-            pass
 
     return True
 
@@ -101,10 +173,11 @@ def add_pdf(file_path):
     return index_pdfs(os.path.dirname(file_path) or "law_pdfs")
 
 def clear_index():
-    global _INDEX, _INDEX_LOADED, _EMB_INDEX
+    global _INDEX, _INDEX_LOADED, _EMB_INDEX, _LAST_INDEX_STATS
     _INDEX = []
     _INDEX_LOADED = True
     _EMB_INDEX = []
+    _LAST_INDEX_STATS = {"processed_files": 0, "reused_files": 0, "deleted_files": 0, "total_docs": 0}
 
 def _emb_search(query: str, top_k: int = 3):
     if not _EMB_INDEX or not _EMB_AVAILABLE:
@@ -139,6 +212,8 @@ def search_pdfs(query: str, top_k: int = 3):
     """
     if not query or not query.strip():
         return None
+    if top_k <= 0:
+        return None
 
     # (Keep your existing external engine logic here)
     if os.environ.get("LTA_USE_EMBEDDINGS") == "1" and _EMB_ENGINE_AVAILABLE:
@@ -146,8 +221,8 @@ def search_pdfs(query: str, top_k: int = 3):
             emb_res = _emb_search_index(query, top_k=top_k)
             if emb_res:
                 return emb_res
-            
-        except Exception as e:print(f"External Embeddings Engine Failed: {e}")
+        except Exception as e:
+            print(f"External Embeddings Engine Failed: {e}")
 
     # Internal embeddings fallback
     if _USE_EMB and _EMB_AVAILABLE:
@@ -160,8 +235,7 @@ def search_pdfs(query: str, top_k: int = 3):
         index_pdfs()
     if not _INDEX:
         return None
-    q = query.lower().strip()
-    tokens = [t for t in q.split() if t]
+    tokens = _tokenize_query(query.strip())
     if not tokens:
         return None
     scored = []
