@@ -9,6 +9,7 @@ import sqlite3
 import json
 import os
 import pandas as pd
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
@@ -46,8 +47,50 @@ def initialize_db():
         )
     ''')
 
+    # Create audit trail table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS mapping_audit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            ipc_section TEXT NOT NULL,
+            previous_value TEXT,
+            new_value TEXT,
+            actor TEXT,
+            created_at TEXT NOT NULL
+        )
+    ''')
+
     conn.commit()
     conn.close()
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def _serialize_mapping(mapping: Optional[Dict]) -> str:
+    return json.dumps(mapping or {}, ensure_ascii=False)
+
+def _log_audit(
+    cursor: sqlite3.Cursor,
+    action: str,
+    ipc_section: str,
+    previous_value: Optional[Dict],
+    new_value: Optional[Dict],
+    actor: str = "system",
+) -> None:
+    cursor.execute(
+        """
+        INSERT INTO mapping_audit (action, ipc_section, previous_value, new_value, actor, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            action,
+            ipc_section,
+            _serialize_mapping(previous_value),
+            _serialize_mapping(new_value),
+            actor,
+            _utc_now_iso(),
+        ),
+    )
 
 def migrate_from_json():
     """Migrate existing JSON data to database on first run."""
@@ -99,8 +142,10 @@ def migrate_from_json():
 
 def insert_mapping(ipc_section: str, bns_section: str, 
                    ipc_full_text: str = "", bns_full_text: str = "", 
-                   notes: str = "", source: str = "user", category: str = "User Added") -> bool:
+                   notes: str = "", source: str = "user", category: str = "User Added",
+                   actor: str = "system") -> bool:
     """Insert a single mapping into the database."""
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -109,9 +154,18 @@ def insert_mapping(ipc_section: str, bns_section: str,
             INSERT INTO mappings (ipc_section, bns_section, ipc_full_text, bns_full_text, notes, source, category)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (ipc_section, bns_section, ipc_full_text, bns_full_text, notes, source, category))
+        new_value = {
+            "ipc_section": ipc_section,
+            "bns_section": bns_section,
+            "ipc_full_text": ipc_full_text,
+            "bns_full_text": bns_full_text,
+            "notes": notes,
+            "source": source,
+            "category": category,
+        }
+        _log_audit(cursor, "insert", ipc_section, None, new_value, actor=actor)
 
         conn.commit()
-        conn.close()
         return True
 
     except sqlite3.IntegrityError:
@@ -120,6 +174,9 @@ def insert_mapping(ipc_section: str, bns_section: str,
     except Exception as e:
         print(f"Error inserting mapping: {e}")
         return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 def get_mapping(ipc_section: str) -> Optional[Dict]:
     """Get a single mapping by IPC section."""
@@ -253,6 +310,141 @@ def get_metadata() -> Dict:
         print(f"Error getting metadata: {e}")
         return {}
 
+def update_mapping(
+    ipc_section: str,
+    bns_section: str,
+    ipc_full_text: str = "",
+    bns_full_text: str = "",
+    notes: str = "",
+    source: str = "user",
+    category: str = "User Added",
+    actor: str = "system",
+) -> bool:
+    """Update an existing mapping. Returns False if mapping doesn't exist."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM mappings WHERE ipc_section = ?", (ipc_section,))
+        row = cursor.fetchone()
+        if not row:
+            return False
+        previous = {
+            "ipc_section": row[0],
+            "bns_section": row[1],
+            "ipc_full_text": row[2],
+            "bns_full_text": row[3],
+            "notes": row[4],
+            "source": row[5],
+            "category": row[6],
+        }
+        cursor.execute(
+            """
+            UPDATE mappings
+            SET bns_section = ?, ipc_full_text = ?, bns_full_text = ?, notes = ?, source = ?, category = ?
+            WHERE ipc_section = ?
+            """,
+            (bns_section, ipc_full_text, bns_full_text, notes, source, category, ipc_section),
+        )
+        new_value = {
+            "ipc_section": ipc_section,
+            "bns_section": bns_section,
+            "ipc_full_text": ipc_full_text,
+            "bns_full_text": bns_full_text,
+            "notes": notes,
+            "source": source,
+            "category": category,
+        }
+        _log_audit(cursor, "update", ipc_section, previous, new_value, actor=actor)
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Error updating mapping: {e}")
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
+
+def upsert_mapping(
+    ipc_section: str,
+    bns_section: str,
+    ipc_full_text: str = "",
+    bns_full_text: str = "",
+    notes: str = "",
+    source: str = "user",
+    category: str = "User Added",
+    actor: str = "system",
+) -> bool:
+    """Insert or update mapping and write audit trail."""
+    existing = get_mapping(ipc_section)
+    if existing is None:
+        return insert_mapping(
+            ipc_section=ipc_section,
+            bns_section=bns_section,
+            ipc_full_text=ipc_full_text,
+            bns_full_text=bns_full_text,
+            notes=notes,
+            source=source,
+            category=category,
+            actor=actor,
+        )
+    return update_mapping(
+        ipc_section=ipc_section,
+        bns_section=bns_section,
+        ipc_full_text=ipc_full_text,
+        bns_full_text=bns_full_text,
+        notes=notes,
+        source=source,
+        category=category,
+        actor=actor,
+    )
+
+def get_mapping_audit(ipc_section: Optional[str] = None, limit: int = 100) -> List[Dict]:
+    """Get audit trail entries, newest first."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if ipc_section:
+            cursor.execute(
+                """
+                SELECT id, action, ipc_section, previous_value, new_value, actor, created_at
+                FROM mapping_audit
+                WHERE ipc_section = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (ipc_section, limit),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, action, ipc_section, previous_value, new_value, actor, created_at
+                FROM mapping_audit
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+        rows = cursor.fetchall()
+        conn.close()
+        entries = []
+        for row in rows:
+            entries.append(
+                {
+                    "id": row[0],
+                    "action": row[1],
+                    "ipc_section": row[2],
+                    "previous_value": json.loads(row[3] or "{}"),
+                    "new_value": json.loads(row[4] or "{}"),
+                    "actor": row[5],
+                    "created_at": row[6],
+                }
+            )
+        return entries
+    except Exception as e:
+        print(f"Error getting mapping audit: {e}")
+        return []
+
 
 def import_mappings_from_csv(file_path: str) -> Tuple[int, List[str]]:
     """Import mappings from CSV file."""
@@ -269,9 +461,6 @@ def import_mappings_from_csv(file_path: str) -> Tuple[int, List[str]]:
             errors.append(f"Missing required columns: {', '.join(missing_cols)}")
             return 0, errors
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
         for _, row in df.iterrows():
             try:
                 ipc_section = str(row['ipc_section']).strip()
@@ -283,19 +472,20 @@ def import_mappings_from_csv(file_path: str) -> Tuple[int, List[str]]:
                 source = str(row.get('source', 'imported')).strip()
                 category = str(row.get('category', 'Imported')).strip()
 
-                cursor.execute('''
-                    INSERT OR REPLACE INTO mappings
-                    (ipc_section, bns_section, ipc_full_text, bns_full_text, notes, source, category)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (ipc_section, bns_section, ipc_full_text, bns_full_text, notes, source, category))
-
-                success_count += 1
+                if upsert_mapping(
+                    ipc_section=ipc_section,
+                    bns_section=bns_section,
+                    ipc_full_text=ipc_full_text,
+                    bns_full_text=bns_full_text,
+                    notes=notes,
+                    source=source,
+                    category=category,
+                    actor="import_csv",
+                ):
+                    success_count += 1
 
             except Exception as e:
                 errors.append(f"Error importing row {len(errors) + success_count + 1}: {e}")
-
-        conn.commit()
-        conn.close()
 
     except Exception as e:
         errors.append(f"Error reading CSV file: {e}")
@@ -318,9 +508,6 @@ def import_mappings_from_excel(file_path: str) -> Tuple[int, List[str]]:
             errors.append(f"Missing required columns: {', '.join(missing_cols)}")
             return 0, errors
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
         for _, row in df.iterrows():
             try:
                 ipc_section = str(row['ipc_section']).strip()
@@ -332,19 +519,20 @@ def import_mappings_from_excel(file_path: str) -> Tuple[int, List[str]]:
                 source = str(row.get('source', 'imported')).strip()
                 category = str(row.get('category', 'Imported')).strip()
 
-                cursor.execute('''
-                    INSERT OR REPLACE INTO mappings
-                    (ipc_section, bns_section, ipc_full_text, bns_full_text, notes, source, category)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (ipc_section, bns_section, ipc_full_text, bns_full_text, notes, source, category))
-
-                success_count += 1
+                if upsert_mapping(
+                    ipc_section=ipc_section,
+                    bns_section=bns_section,
+                    ipc_full_text=ipc_full_text,
+                    bns_full_text=bns_full_text,
+                    notes=notes,
+                    source=source,
+                    category=category,
+                    actor="import_excel",
+                ):
+                    success_count += 1
 
             except Exception as e:
                 errors.append(f"Error importing row {len(errors) + success_count + 1}: {e}")
-
-        conn.commit()
-        conn.close()
 
     except Exception as e:
         errors.append(f"Error reading Excel file: {e}")
