@@ -1,6 +1,6 @@
 /* 1. Main App Container */
 [data-testid="stAppViewContainer"] {
-  background: #000000;
+  background: transparent !important;
   overflow-y: scroll !important;
   overflow-x: hidden;
   height: 100vh;
@@ -155,9 +155,9 @@
 
 /* Fixed compact site logo at top-left (used instead of the header brand) */
 .site-logo {
-  position: fixed !important;
-  top: 18px !important;
-  left: 18px !important;
+  position: absolute !important;
+  top: 26px !important;
+  left: 16px !important;
   z-index: 999999 !important;
   display: inline-flex !important;
   visibility: visible !important;
@@ -198,12 +198,13 @@
 
 /* Add left padding to the header to avoid overlap with the fixed logo */
 .top-header {
-  padding-left: 180px;
+  padding-left: 220px;
   padding-right: 10px;
 }
 
 /* Responsive adjustments */
 @media (max-width: 1100px) {
+
   .site-logo .logo-text {
     display: none !important;
   }
@@ -223,6 +224,7 @@
 }
 
 @media (max-width: 920px) {
+
   .site-logo {
     left: 12px;
     top: 12px;
@@ -235,6 +237,7 @@
 }
 
 @media (max-width: 640px) {
+
   .site-logo {
     left: 8px;
     top: 8px;
@@ -251,7 +254,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 15px;
   padding: 6px 10px;
   border-radius: 14px;
   background: linear-gradient(180deg,
@@ -274,7 +277,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0;
-  padding: 6px 10px;
+  padding: 8px 14px;
   border-radius: 10px;
   color: #cbd5e1 !important;
   text-decoration: none !important;
@@ -324,7 +327,7 @@
   align-items: center;
   justify-content: center;
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: 10px;
   text-decoration: none !important;
   font-size: 12.5px;
   font-weight: 700;
@@ -366,7 +369,7 @@
 }
 
 .app-footer {
-  margin-top: 26px;
+  margin-top: 40px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   background: linear-gradient(180deg,
@@ -377,12 +380,13 @@
 .app-footer-inner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 15px;
   flex-wrap: wrap;
   padding: 8px 10px;
 }
 
 @media (max-width: 920px) {
+
   .top-header-inner {
     display: grid;
     grid-template-columns: 1fr;
@@ -455,6 +459,10 @@ h6 {
   font-weight: 700;
 }
 
+h2 {
+  margin: 30px 0 0 !important;
+}
+
 /* Home Page Styling */
 .main-container {
   max-width: 1000px;
@@ -486,8 +494,9 @@ h6 {
   font-size: 18px;
   font-weight: 700;
   color: #ffffff;
-  margin-top: 28px;
+  margin-top: 40px;
   margin-bottom: 18px;
+  margin: 40px 0 18px 0;
 }
 
 /* Home Cards - Compact Black Theme */
@@ -502,6 +511,7 @@ h6 {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background-color: rgb(31, 31, 151);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(8px);
   position: relative;
@@ -577,7 +587,7 @@ a.home-card {
   font-size: 13px;
   font-weight: 600;
   color: #a8f3b0;
-  padding: 8px 0;
+  padding: 8px 0 0;
   border-top: 1px solid rgba(80, 80, 80, 0.15);
   margin-top: 2px;
   cursor: pointer;
@@ -640,7 +650,6 @@ a.home-card {
   font-weight: 600 !important;
   height: 36px !important;
   width: 160px !important;
-  margin-top: -48px !important;
 }
 
 .home-card-compact+.stButton>button:after {
@@ -745,6 +754,7 @@ a.home-card {
 
 /* small tweak for small screens */
 @media (max-width: 800px) {
+
   .result-grid {
     flex-direction: column;
   }
@@ -796,6 +806,7 @@ a.home-card {
       rgba(255, 255, 255, 0.18),
       rgba(255, 255, 255, 0.04)) 1;
   box-shadow: none;
+  border: 1px solid transparent !important;
   backdrop-filter: saturate(110%);
   transition:
     background 0.2s ease,
@@ -832,7 +843,6 @@ a.home-card {
 /* Home: full-width glossy CTA in cards */
 .home-card+.stButton>button {
   width: 100% !important;
-  margin-top: -95px !important;
   padding: 0 20px !important;
   height: 46px !important;
   border-radius: 12px !important;
@@ -887,7 +897,6 @@ a.home-card {
 .mapper-wrap .result-card+.stButton {
   margin-top: -52px;
   display: inline-block;
-  float: right;
 }
 
 .mapper-wrap .result-card+.stButton>button {
