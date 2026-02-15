@@ -362,20 +362,44 @@ elif current_page == "OCR":
     with col1:
         uploaded_file = st.file_uploader("Upload (FIR/Notice)", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
         if uploaded_file:
-            st.image(uploaded_file, use_column_width=True)
+            st.image(uploaded_file, width=500)
     
     with col2:
-        if uploaded_file and st.button("🔧 Extract & Analyze", use_container_width=True):
-            if ENGINES_AVAILABLE:
-                raw = uploaded_file.read()
+       if st.button("🔧 Extract & Analyze", use_container_width=True):
+
+        if uploaded_file is None:
+            st.warning("⚠ Please upload a file first.")
+            st.stop()
+
+        if not ENGINES_AVAILABLE:
+            st.error("❌ OCR Engine not available.")
+            st.stop()
+
+        try:
+            with st.spinner("🔍 Extracting text... Please wait"):
+                raw = uploaded_file.getvalue()   # <-- change here
                 extracted = extract_text(raw)
-                st.text_area("Extracted Text", extracted, height=300)
-                
+
+            if not extracted or not extracted.strip():
+              st.warning("⚠ No text detected in the uploaded image.")
+              st.stop()
+
+            st.success("✅ Text extraction completed!")
+            st.text_area("Extracted Text", extracted, height=300)
+
+            with st.spinner("🤖 Generating action items..."):
                 summary = llm_summarize(extracted, question="Action items?")
-                if summary:
-                    st.info(f"**Action Item:** {summary}")
+
+            if summary:
+                st.success("✅ Analysis completed!")
+                st.info(f"**Action Item:** {summary}")
             else:
-                st.error("OCR Engine not available.")
+                st.warning("⚠ No action items found.")
+
+        except Exception as e:
+            st.error("🚨 Something went wrong during OCR processing.")
+            st.exception(e)
+
 
 # ============================================================================
 # PAGE: FACT CHECKER
@@ -384,32 +408,68 @@ elif current_page == "Fact":
     st.markdown("## 📚 Grounded Fact Checker")
     st.markdown("Ask a legal question to verify answers with citations from official PDFs.")
     st.divider()
-    
+
     col1, col2 = st.columns([2, 1])
     with col1:
-        user_question = st.text_input("Question", placeholder="e.g., penalty for cheating?")
+        user_question = st.text_input(
+            "Question",
+            placeholder="e.g., penalty for cheating?"
+        )
     with col2:
         verify_btn = st.button("📖 Verify", use_container_width=True)
-    
+
+    # ==========================
+    # Upload PDFs
+    # ==========================
     with st.expander("Upload Law PDFs"):
         uploaded_pdf = st.file_uploader("Upload PDF", type=["pdf"])
-        if uploaded_pdf and ENGINES_AVAILABLE:
-            save_dir = "law_pdfs"
-            os.makedirs(save_dir, exist_ok=True)
-            path = os.path.join(save_dir, _safe_filename(uploaded_pdf.name, "doc.pdf"))
-            with open(path, "wb") as f: f.write(uploaded_pdf.read())
-            add_pdf(path)
-            st.success(f"Added {uploaded_pdf.name}")
 
-    if user_question and verify_btn:
-        if ENGINES_AVAILABLE:
-            res = search_pdfs(user_question)
+        if uploaded_pdf and ENGINES_AVAILABLE:
+            try:
+                save_dir = "law_pdfs"
+                os.makedirs(save_dir, exist_ok=True)
+                path = os.path.join(
+                    save_dir,
+                    _safe_filename(uploaded_pdf.name, "doc.pdf")
+                )
+
+                with open(path, "wb") as f:
+                    f.write(uploaded_pdf.read())
+
+                add_pdf(path)
+                st.success(f"✅ Added {uploaded_pdf.name}")
+
+            except Exception as e:
+                st.error("🚨 Failed to process uploaded PDF.")
+                st.exception(e)
+
+    # ==========================
+    # Verify Question
+    # ==========================
+    if verify_btn:
+
+        if not user_question or not user_question.strip():
+            st.warning("⚠ Please enter a question first.")
+            st.stop()
+
+        if not ENGINES_AVAILABLE:
+            st.error("❌ RAG Engine offline.")
+            st.stop()
+
+        try:
+            with st.spinner("🔎 Searching legal documents..."):
+                res = search_pdfs(user_question)
+
             if res:
+                st.success("✅ Verification complete!")
                 st.markdown(res)
             else:
-                st.info("No citations found.")
-        else:
-            st.error("RAG Engine offline.")
+                st.info("⚠ No citations found for this query.")
+
+        except Exception as e:
+            st.error("🚨 Something went wrong during fact verification.")
+            st.exception(e)
+
 
 # ============================================================================
 # PAGE: SETTINGS
