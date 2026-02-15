@@ -8,6 +8,7 @@ import/export functionality, and migration from JSON.
 import sqlite3
 import json
 import os
+import shutil
 import pandas as pd
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
@@ -444,6 +445,53 @@ def get_mapping_audit(ipc_section: Optional[str] = None, limit: int = 100) -> Li
     except Exception as e:
         print(f"Error getting mapping audit: {e}")
         return []
+
+def backup_database(backup_path: Optional[str] = None) -> Optional[str]:
+    """Create a timestamped SQLite backup and return path."""
+    try:
+        if not os.path.exists(_DB_FILE):
+            return None
+        backup_dir = os.path.join(os.path.dirname(_DB_FILE), "backups")
+        os.makedirs(backup_dir, exist_ok=True)
+        if backup_path is None:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            backup_path = os.path.join(backup_dir, f"mapping_db_{stamp}.sqlite")
+        shutil.copy2(_DB_FILE, backup_path)
+        return backup_path
+    except Exception as e:
+        print(f"Error backing up database: {e}")
+        return None
+
+def _check_sqlite_integrity(db_path: str) -> bool:
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA integrity_check;")
+        result = cursor.fetchone()
+        return bool(result and str(result[0]).lower() == "ok")
+    except Exception:
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
+
+def restore_database(backup_path: str) -> bool:
+    """Restore database from backup file after integrity validation."""
+    try:
+        if not os.path.exists(backup_path):
+            return False
+        if not _check_sqlite_integrity(backup_path):
+            return False
+        if os.path.exists(_DB_FILE):
+            pre_restore = backup_database()
+            if pre_restore is None:
+                return False
+        shutil.copy2(backup_path, _DB_FILE)
+        return _check_sqlite_integrity(_DB_FILE)
+    except Exception as e:
+        print(f"Error restoring database: {e}")
+        return False
 
 
 def import_mappings_from_csv(file_path: str) -> Tuple[int, List[str]]:
