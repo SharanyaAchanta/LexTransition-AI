@@ -963,3 +963,198 @@ hr {
   transform: translateY(-2px);
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
 }
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS (UP TO 800px)
+   ========================================================================== */
+@media (max-width: 800px) {
+
+  /* --- Fixed Header System --- */
+
+  /* 1. Main Content padding to prevent overlap */
+  [data-testid="stMainBlockContainer"] {
+    padding-top: 200px !important;
+    /* Increased for Nav + Button */
+  }
+
+  /* 2. Fixed Logo Bar */
+  .site-logo {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 50px;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 24, 0.98) !important;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0 !important;
+    z-index: 99999 !important;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .site-logo .logo-text {
+    display: inline !important;
+    font-size: 16px;
+  }
+
+  /* 3. Fixed Navigation Bar (below logo) */
+  .top-header {
+    position: fixed !important;
+    top: 50px !important;
+    /* Height of site-logo */
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    /* Allow growth */
+    margin: 0 !important;
+    padding: 8px 4px 12px 4px !important;
+    border-radius: 0 0 12px 12px !important;
+    background: rgba(16, 20, 36, 0.95) !important;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 99998 !important;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .top-header-inner {
+    display: block;
+    /* Simpler layout */
+    padding: 0;
+    min-height: auto;
+  }
+
+  .top-header-left {
+    display: none !important;
+  }
+
+  /* Show CTA button */
+  .top-header-right {
+    display: flex !important;
+    justify-content: center;
+    width: 100%;
+    margin-top: 10px;
+    padding-bottom: 4px;
+  }
+
+  .top-header-center {
+    width: 100%;
+  }
+
+  .top-nav {
+    display: flex;
+    flex-wrap: wrap !important;
+    /* Allow wrapping */
+    justify-content: center;
+    /* Center items */
+    align-items: center;
+    gap: 8px;
+    /* Slightly tighter gap for 2 lines */
+    padding: 2px 4px;
+    margin: 0;
+    width: 100%;
+    border: none;
+    background: transparent;
+    overflow-x: visible;
+    /* No scroll */
+    white-space: normal;
+    /* Allow wrap */
+  }
+
+  .top-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .top-nav-link {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    /* Slightly smaller padding */
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.03);
+    margin-bottom: 2px;
+  }
+
+  /* Hide vertical dividers in multiline mode to avoid visual clutter */
+  .top-nav-link+.top-nav-link::before {
+    display: none;
+  }
+
+  /* --- Home Page --- */
+  .home-title {
+    font-size: 26px;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .home-subtitle {
+    font-size: 14px;
+    text-align: center;
+    padding: 0 10px;
+  }
+
+  .home-what {
+    text-align: center;
+    font-size: 16px;
+    margin-top: 24px;
+  }
+
+  /* Home Cards */
+  .home-card {
+    margin-bottom: 16px;
+  }
+
+  /* --- Mapper Page --- */
+  .mapper-wrap .result-card+.stButton,
+  .mapper-wrap .result-card+.stButton+.stButton {
+    margin-top: 12px !important;
+    margin-right: 0 !important;
+    display: block !important;
+    float: none !important;
+    width: 100% !important;
+  }
+
+  .mapper-wrap .result-card+.stButton>button,
+  .mapper-wrap .result-card+.stButton+.stButton>button {
+    width: 100% !important;
+    height: 44px !important;
+    margin-bottom: 10px;
+  }
+
+  .result-card {
+    padding-bottom: 20px !important;
+  }
+
+  .result-grid {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .result-col {
+    padding: 12px;
+  }
+
+  .result-col-title {
+    margin-bottom: 4px;
+  }
+
+  /* --- Footer --- */
+  .app-footer-inner {
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .footer-socials {
+    margin: 0;
+    justify-content: center;
+  }
+}
