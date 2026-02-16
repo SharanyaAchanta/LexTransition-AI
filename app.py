@@ -95,7 +95,7 @@ url_page = _read_url_page()
 if "pending_page" in st.session_state:
     st.session_state.current_page = st.session_state.pop("pending_page")
 else:
-    if url_page in {"Home", "Mapper", "OCR", "Fact", "Settings"}:
+    if url_page in {"Home", "Mapper", "OCR", "Fact", "Settings", "Privacy", "FAQ"}:
         st.session_state.current_page = url_page
 
 nav_items = [
@@ -104,6 +104,8 @@ nav_items = [
     ("OCR", "Document OCR"),
     ("Fact", "Fact Checker"),
     ("Settings", "Settings / About"),
+    ("FAQ", "FAQ"),
+    ("Privacy", "Privacy Policy"),
 ]
 
 header_links = []
@@ -487,8 +489,94 @@ elif current_page == "Settings":
             try:
                 # Dummy call logic could go here
                 st.success("AI System Online")
-            except:
+            except Exception:
                 st.error("AI System Offline")
+
+# ============================================================================
+# PAGE: PRIVACY POLICY
+# ============================================================================
+elif current_page == "Privacy":
+    st.markdown("## 🔒 Privacy Policy")
+    st.markdown("**Last updated:** February 2025")
+    st.divider()
+    st.markdown("""
+LexTransition AI is designed with **privacy first**. This policy explains how we handle your data when you use this application.
+
+### Data We Process
+
+- **Offline-first:** The application can run entirely on your machine. No legal documents, section queries, or uploaded files are sent to external servers by default.
+- **Uploaded files:** Documents you upload (FIRs, notices, PDFs) are processed locally. They may be stored temporarily in project folders (e.g. `law_pdfs/`) on the machine where the app runs.
+- **Mapping data:** IPC→BNS mapping lookups use the local database (`mapping_db.json`) and do not leave your environment.
+- **OCR & AI:** When using local OCR (EasyOCR/pytesseract) and a local LLM (e.g. Ollama), all processing stays on your device.
+
+### Optional External Services
+
+- If you deploy the app (e.g. Streamlit Cloud), the hosting provider’s terms and data policies apply to that deployment.
+- Icons or assets loaded from CDNs (e.g. Flaticon, Simple Icons) are subject to those services’ privacy policies.
+
+### Your Rights
+
+You control the data on your instance. You can delete uploaded PDFs and local mapping data at any time. For hosted deployments, refer to the host’s data retention and deletion policies.
+
+### Changes
+
+We may update this policy from time to time. The “Last updated” date at the top reflects the latest revision. Continued use of the app after changes constitutes acceptance of the updated policy.
+
+### Contact
+
+For questions about this Privacy Policy or LexTransition AI, please open an issue or discussion on the project’s GitHub repository.
+""")
+
+# ============================================================================
+# PAGE: FAQ
+# ============================================================================
+elif current_page == "FAQ":
+    st.markdown("## ❓ Frequently Asked Questions")
+    st.markdown("Quick answers to common questions about LexTransition AI.")
+    st.divider()
+
+    with st.expander("**What is LexTransition AI?**"):
+        st.markdown("""
+LexTransition AI is an **offline-first legal assistant** that helps you navigate the transition from old Indian laws (IPC, CrPC, IEA) to the new BNS, BNSS, and BSA frameworks. It offers:
+- **IPC → BNS Mapper:** Convert old section numbers to new equivalents with notes.
+- **Document OCR:** Extract text from FIRs and legal notices; get action items in plain language.
+- **Grounded Fact Checker:** Ask legal questions and get answers backed by citations from your uploaded law PDFs.
+""")
+
+    with st.expander("**Does my data leave my computer?**"):
+        st.markdown("""
+When run locally with default settings, **no**. Documents, section queries, and uploads are processed on your machine. Local OCR and local LLM (e.g. Ollama) keep everything offline. If you use a hosted version (e.g. Streamlit Cloud), that provider’s infrastructure and policies apply.
+""")
+
+    with st.expander("**How do I find the BNS equivalent of an IPC section?**"):
+        st.markdown("""
+Go to **IPC → BNS Mapper**, enter the IPC section number (e.g. 420, 302, 378), and click **Find BNS Eq.** The app looks up the mapping in the local database and shows the corresponding BNS section and notes. You can also use **Analyze Differences (AI)** if you have Ollama running for a plain-language comparison.
+""")
+
+    with st.expander("**Can I add my own IPC–BNS mappings?**"):
+        st.markdown("""
+Yes. On the Mapper page, use the **Add New Mapping to Database** expander. Enter IPC section, BNS section, optional legal text for both, and a short note. Click **Save to Database** to persist the mapping for future lookups.
+""")
+
+    with st.expander("**How does the Fact Checker work?**"):
+        st.markdown("""
+The Fact Checker uses the PDFs you upload (or place in `law_pdfs/`). You ask a question; the app searches those documents and returns answers with citations. For better results, use official law PDFs and ensure they are indexed (upload via the app or add files to the folder and reload).
+""")
+
+    with st.expander("**What file types can I upload for OCR?**"):
+        st.markdown("""
+The Document OCR page accepts **images** (JPG, PNG, JPEG) of legal notices or FIRs. Upload a file, then click **Extract & Analyze** to get extracted text and, if available, an AI-generated summary of action items (when a local LLM is configured).
+""")
+
+    with st.expander("**The app says \"Engines are offline.\" What should I do?**"):
+        st.markdown("""
+This usually means required components (mapping DB, OCR, or RAG) failed to load. Check that dependencies are installed (`pip install -r requirements.txt`), that `mapping_db.json` exists, and that Tesseract/EasyOCR is available if you use OCR. For AI features, ensure Ollama (or your LLM) is running and reachable.
+""")
+
+    with st.expander("**Where is the mapping data stored?**"):
+        st.markdown("""
+Mappings are stored in **`mapping_db.json`** in the project root. You can edit this file or use the Mapper UI to add/update entries. For bulk updates, use the engine’s import/export utilities (e.g. CSV/Excel) if available in your build.
+""")
 
 # Footer
 st.markdown(
@@ -497,6 +585,8 @@ st.markdown(
   <div class="app-footer-inner">
     <span class="top-chip">Offline Mode</span>
     <span class="top-chip">Privacy First</span>
+    <a class="top-credit" href="?page=Privacy" target="_self">Privacy Policy</a>
+    <a class="top-credit" href="?page=FAQ" target="_self">FAQ</a>
     <a class="top-credit" href="https://www.flaticon.com/" target="_blank" rel="noopener noreferrer">Icons: Flaticon</a>
     <div class="footer-socials">
       <a href="https://github.com/SharanyaAchanta/" target="_blank" rel="noopener noreferrer" class="footer-social-icon" title="GitHub">
