@@ -211,144 +211,181 @@ elif current_page == "Mapper":
     st.markdown("## ✓ IPC → BNS Transition Mapper")
     st.markdown("Convert old IPC sections into new BNS equivalents with legal-grade accuracy.")
     st.divider()
-    
-    # Input Section
+
     st.markdown('<div class="mapper-wrap">', unsafe_allow_html=True)
+
+    # ---------------- LOADING STATES ----------------
+    if "mapper_loading" not in st.session_state:
+        st.session_state.mapper_loading = False
+
+    if "analysis_loading" not in st.session_state:
+        st.session_state.analysis_loading = False
+
+    # ---------------- INPUT SECTION ----------------
     col1, col2 = st.columns([4, 1])
     with col1:
-        search_query = st.text_input("Enter IPC Section", placeholder="e.g., 420, 302, 378")
+        search_query = st.text_input(
+            "Enter IPC Section",
+            placeholder="e.g., 420, 302, 378"
+        )
     with col2:
-        st.write("##") # Spacer
-        search_btn = st.button("🔍 Find BNS Eq.", use_container_width=True)
+        st.write("##")
+        search_btn = st.button(
+            "🔍 Find BNS Eq.",
+            use_container_width=True,
+            disabled=st.session_state.mapper_loading
+        )
 
-    # --- STEP 1: Handle Search Logic & State ---
+    # ---------------- SEARCH LOGIC ----------------
     if search_query and search_btn:
         if ENGINES_AVAILABLE:
+            st.session_state.mapper_loading = True
+
             with st.spinner("Searching database..."):
-                res = map_ipc_to_bns(search_query.strip())
-                if res:
-                    st.session_state['last_result'] = res
-                    st.session_state['last_query'] = search_query.strip()
-                    # Reset analysis view for new search
-                    st.session_state['active_analysis'] = None 
-                    st.session_state['active_view_text'] = False
-                else:
-                    st.session_state['last_result'] = None
-                    st.error(f"❌ Section IPC {search_query} not found in database.")
+                try:
+                    res = map_ipc_to_bns(search_query.strip())
+
+                    if res:
+                        st.session_state["last_result"] = res
+                        st.session_state["last_query"] = search_query.strip()
+                        st.session_state["active_analysis"] = None
+                        st.session_state["active_view_text"] = False
+                    else:
+                        st.session_state["last_result"] = None
+                        st.error(f"❌ Section IPC {search_query} not found.")
+
+                except Exception as e:
+                    st.error("❌ Search failed.")
+                    st.exception(e)
+
+            st.session_state.mapper_loading = False
         else:
-            st.error("❌ Engines are offline. Cannot perform database lookup.")
+            st.error("❌ Engines are offline. Cannot perform lookup.")
 
     st.divider()
 
-    # --- STEP 2: Render Persistent Results ---
-    # We check session_state instead of search_btn so results survive refreshes
-    if st.session_state.get('last_result'):
-        result = st.session_state['last_result']
-        ipc = st.session_state['last_query']
+    # ---------------- RESULT RENDER ----------------
+    if st.session_state.get("last_result"):
+        result = st.session_state.get("last_result", {})
+        ipc = st.session_state.get("last_query", "")
         bns = result.get("bns_section", "N/A")
         notes = result.get("notes", "See source mapping.")
         source = result.get("source", "mapping_db")
-        
-        # Render Result Card
+
+        # Result Card
         st.markdown(f"""
         <div class="result-card">
             <div class="result-badge">Mapping • found</div>
             <div class="result-grid">
                 <div class="result-col">
                     <div class="result-col-title">IPC Section</div>
-                    <div style="font-size:20px;font-weight:700;color:var(--text-color);margin-top:6px;">{html_lib.escape(ipc)}</div>
+                    <div style="font-size:20px;font-weight:700;">
+                        {html_lib.escape(ipc)}
+                    </div>
                 </div>
                 <div class="result-col">
                     <div class="result-col-title">BNS Section</div>
-                    <div style="font-size:20px;font-weight:700;color:var(--primary-color);margin-top:6px;">{html_lib.escape(bns)}</div>
+                    <div style="font-size:20px;font-weight:700;">
+                        {html_lib.escape(bns)}
+                    </div>
                 </div>
             </div>
-            <ul class="result-list"><li>{html_lib.escape(notes)}</li></ul>
-            <div style="font-size:12px;opacity:0.8;margin-top:10px;">Source: {html_lib.escape(source)}</div>
+            <ul class="result-list">
+                <li>{html_lib.escape(notes)}</li>
+            </ul>
+            <div style="font-size:12px;opacity:0.8;margin-top:10px;">
+                Source: {html_lib.escape(source)}
+            </div>
         </div>
         """, unsafe_allow_html=True)
-        
-        st.write("###") 
 
-        # --- STEP 3: Action Buttons ---
+        st.write("###")
+
+        # ---------------- ACTION BUTTONS ----------------
         col_a, col_b, col_c = st.columns(3)
-        
+
         with col_a:
-            if st.button("🤖 Analyze Differences (AI)", use_container_width=True):
-                st.session_state['active_analysis'] = ipc
-                st.session_state['active_view_text'] = False
+            analyze_btn = st.button(
+                "🤖 Analyze Differences (AI)",
+                use_container_width=True,
+                disabled=st.session_state.analysis_loading
+            )
+
+            if analyze_btn:
+                st.session_state.analysis_loading = True
+                st.session_state["active_analysis"] = ipc
+                st.session_state["active_view_text"] = False
 
         with col_b:
             if st.button("📄 View Raw Text", use_container_width=True):
-                st.session_state['active_view_text'] = True
-                st.session_state['active_analysis'] = None
+                st.session_state["active_view_text"] = True
+                st.session_state["active_analysis"] = None
 
         with col_c:
             if st.button("📝 Summarize Note", use_container_width=True):
                 summary = llm_summarize(notes, question=f"Changes in {ipc}?")
-                if summary: 
+                if summary:
                     st.success(f"Summary: {summary}")
                 else:
                     st.error("❌ LLM Engine failed to generate summary.")
 
-        # --- STEP 4: Persistent Views (Rendered outside the columns) ---
-        
-        # 1. AI Analysis View
-        if st.session_state.get('active_analysis') == ipc:
+        # ---------------- AI ANALYSIS VIEW ----------------
+        if st.session_state.get("active_analysis") == ipc:
             st.divider()
-            with st.spinner("Talking to Ollama (AI)..."):
-                comp_result = compare_ipc_bns(ipc)
-                analysis_text = comp_result.get('analysis', "")
-                
-                # Check for tag defined in comparator.py
-                if "ERROR:" in analysis_text or "Error" in analysis_text or "Connection Error" in analysis_text:
-                    st.error(f"❌ AI Error: {analysis_text.replace('ERROR:', '')}")
-                    st.info("💡 Make sure Ollama is running (`ollama serve`) and you have pulled the model (`ollama pull llama3`).")
-                else:
-                    # Final 3-column analysis layout
-                    c1, c2, c3 = st.columns([1, 1.2, 1])
-                    with c1:
-                        st.markdown(f"**📜 IPC {ipc} Text**")
-                        st.info(comp_result.get('ipc_text', 'No text available.'))
-                    with c2:
-                        st.markdown("**🤖 AI Comparison**")
-                        st.success(analysis_text)
-                    with c3:
-                        st.markdown(f"**⚖️ {bns} Text**")
-                        st.warning(comp_result.get('bns_text', 'No text available.'))
 
-        # 2. Raw Text View
-        elif st.session_state.get('active_view_text'):
+            with st.spinner("Talking to Ollama (AI)..."):
+                try:
+                    comp_result = compare_ipc_bns(ipc)
+                    analysis_text = comp_result.get("analysis", "")
+                except Exception as e:
+                    st.error("❌ AI processing failed.")
+                    st.exception(e)
+                    comp_result = {}
+                    analysis_text = ""
+
+            st.session_state.analysis_loading = False
+
+            if "ERROR:" in analysis_text or "Error" in analysis_text:
+                st.error(analysis_text)
+            else:
+                c1, c2, c3 = st.columns([1, 1.2, 1])
+
+                with c1:
+                    st.markdown(f"**📜 IPC {ipc} Text**")
+                    st.info(comp_result.get("ipc_text", "No text available."))
+
+                with c2:
+                    st.markdown("**🤖 AI Comparison**")
+                    st.success(analysis_text)
+
+                with c3:
+                    st.markdown(f"**⚖️ {bns} Text**")
+                    st.warning(comp_result.get("bns_text", "No text available."))
+
+        # ---------------- RAW TEXT VIEW ----------------
+        elif st.session_state.get("active_view_text"):
             st.divider()
             v1, v2 = st.columns(2)
+
             with v1:
                 st.markdown("**IPC Original Text**")
-                st.text_area("ipc_raw", result.get('ipc_full_text', 'No text found in DB'), height=250, disabled=True)
+                st.text_area(
+                    "ipc_raw",
+                    result.get("ipc_full_text", "No text found."),
+                    height=250,
+                    disabled=True
+                )
+
             with v2:
                 st.markdown("**BNS Updated Text**")
-                st.text_area("bns_raw", result.get('bns_full_text', 'No text found in DB'), height=250, disabled=True)
+                st.text_area(
+                    "bns_raw",
+                    result.get("bns_full_text", "No text found."),
+                    height=250,
+                    disabled=True
+                )
 
-    # Add Mapping Form (for when sections aren't found)
-    with st.expander("➕ Add New Mapping to Database"):
-        n_ipc = st.text_input("New IPC Section", value=search_query)
-        n_bns = st.text_input("New BNS Section")
-        n_ipc_text = st.text_area("IPC Legal Text")
-        n_bns_text = st.text_area("BNS Legal Text")
-        n_notes = st.text_input("Short Summary/Note")
-        
-        if st.button("Save to Database"):
-            if not n_ipc or not n_bns:
-                st.warning("⚠️ IPC and BNS section numbers are required.")
-            else:
-                success = add_mapping(n_ipc, n_bns, n_ipc_text, n_bns_text, n_notes)
-                if success:
-                    st.success(f"✅ IPC {n_ipc} successfully mapped to {n_bns} and saved.")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("❌ Database Error: Failed to save mapping. Is the database file locked or missing?")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================================
 # PAGE: DOCUMENT OCR
@@ -357,6 +394,10 @@ elif current_page == "OCR":
     st.markdown("## 🖼️ Document OCR")
     st.markdown("Extract text and key action items from legal notices, FIRs, and scanned documents.")
     st.divider()
+
+    if "ocr_loading" not in st.session_state:
+        st.session_state.ocr_loading = False
+
     
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -365,17 +406,37 @@ elif current_page == "OCR":
             st.image(uploaded_file, use_column_width=True)
     
     with col2:
-        if uploaded_file and st.button("🔧 Extract & Analyze", use_container_width=True):
-            if ENGINES_AVAILABLE:
-                raw = uploaded_file.read()
-                extracted = extract_text(raw)
-                st.text_area("Extracted Text", extracted, height=300)
-                
-                summary = llm_summarize(extracted, question="Action items?")
-                if summary:
-                    st.info(f"**Action Item:** {summary}")
-            else:
-                st.error("OCR Engine not available.")
+        extract_btn = st.button(
+        "🔧 Extract & Analyze",
+        use_container_width=True,
+        disabled=st.session_state.ocr_loading
+)
+
+    if uploaded_file and extract_btn:
+        if ENGINES_AVAILABLE:
+            st.session_state.ocr_loading = True
+
+            with st.spinner("Extracting and analyzing document..."):
+                try:
+                    raw = uploaded_file.read()
+                    extracted = extract_text(raw)
+
+                    st.text_area("Extracted Text", extracted, height=300)
+
+                    summary = llm_summarize(extracted, question="Action items?")
+                    if summary:
+                        st.info(f"**Action Item:** {summary}")
+                    else:
+                        st.warning("No summary generated.")
+
+                except Exception as e:
+                    st.error("❌ OCR processing failed.")
+                    st.exception(e)
+
+            st.session_state.ocr_loading = False
+        else:
+            st.error("OCR Engine not available.")
+
 
 # ============================================================================
 # PAGE: FACT CHECKER
@@ -384,12 +445,20 @@ elif current_page == "Fact":
     st.markdown("## 📚 Grounded Fact Checker")
     st.markdown("Ask a legal question to verify answers with citations from official PDFs.")
     st.divider()
-    
+
+    if "fact_loading" not in st.session_state:
+        st.session_state.fact_loading = False
+
     col1, col2 = st.columns([2, 1])
     with col1:
         user_question = st.text_input("Question", placeholder="e.g., penalty for cheating?")
     with col2:
-        verify_btn = st.button("📖 Verify", use_container_width=True)
+        verify_btn = st.button(
+            "📖 Verify",
+            use_container_width=True,
+            disabled=st.session_state.fact_loading
+)
+
     
     with st.expander("Upload Law PDFs"):
         uploaded_pdf = st.file_uploader("Upload PDF", type=["pdf"])
@@ -403,13 +472,25 @@ elif current_page == "Fact":
 
     if user_question and verify_btn:
         if ENGINES_AVAILABLE:
-            res = search_pdfs(user_question)
-            if res:
-                st.markdown(res)
-            else:
-                st.info("No citations found.")
+            st.session_state.fact_loading = True
+
+            with st.spinner("Verifying with legal database..."):
+                try:
+                    res = search_pdfs(user_question)
+
+                    if res:
+                        st.markdown(res)
+                    else:
+                        st.info("No citations found.")
+
+                except Exception as e:
+                    st.error("❌ Verification failed.")
+                    st.exception(e)
+
+                st.session_state.fact_loading = False
         else:
             st.error("RAG Engine offline.")
+
 
 # ============================================================================
 # PAGE: SETTINGS
