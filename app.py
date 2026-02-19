@@ -29,6 +29,7 @@ try:
     from engine.mapping_logic import map_ipc_to_bns, add_mapping
     from engine.rag_engine import search_pdfs, add_pdf, index_pdfs
     from engine.db import import_mappings_from_csv, import_mappings_from_excel, export_mappings_to_json, export_mappings_to_csv
+    from engine.config import get_runtime_diagnostics, validate_runtime_config
     
     # Import the Semantic Comparator Engine
     from engine.comparator import compare_ipc_bns
@@ -61,6 +62,15 @@ if ENGINES_AVAILABLE and not st.session_state.get("pdf_indexed"):
         st.session_state.pdf_indexed = True
     except Exception:
         pass
+
+if ENGINES_AVAILABLE and not st.session_state.get("runtime_checked"):
+    try:
+        warnings = validate_runtime_config()
+        for warn in warnings:
+            st.warning(f"Runtime config warning: {warn}")
+    except Exception:
+        pass
+    st.session_state.runtime_checked = True
 
 # --- NAVIGATION LOGIC ---
 
@@ -498,6 +508,17 @@ elif current_page == "Settings":
                 st.success("AI System Online")
             except Exception:
                 st.error("AI System Offline")
+    if ENGINES_AVAILABLE:
+        st.divider()
+        st.markdown("### Runtime Diagnostics")
+        try:
+            diagnostics = get_runtime_diagnostics()
+            for feature, info in diagnostics.items():
+                status = info.get("status", "unknown").upper()
+                reason = info.get("reason", "")
+                st.markdown(f"- **{feature}**: `{status}` - {reason}")
+        except Exception as e:
+            st.warning(f"Unable to load diagnostics: {e}")
 
 # ============================================================================
 # PAGE: PRIVACY POLICY
