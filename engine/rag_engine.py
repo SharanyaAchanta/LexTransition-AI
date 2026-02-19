@@ -244,13 +244,22 @@ def search_pdfs(query: str, top_k: int = 3):
         score = sum(txt.count(t) for t in tokens)
         if score > 0:
             first_pos = min((txt.find(t) for t in tokens if txt.find(t) >= 0), default=-1)
-            snippet = doc["text"][first_pos:first_pos+300].replace("\n"," ") if first_pos >= 0 else doc["text"][:200]
-            scored.append((score, doc["file"], doc["page"], snippet))
+            if first_pos >= 0:
+                start_offset = max(0, first_pos)
+                end_offset = min(len(doc["text"]), start_offset + 300)
+            else:
+                start_offset = 0
+                end_offset = min(len(doc["text"]), 200)
+            snippet = doc["text"][start_offset:end_offset].replace("\n"," ")
+            scored.append((score, doc["file"], doc["page"], snippet, start_offset, end_offset))
     if not scored:
         return None
     scored.sort(key=lambda x: x[0], reverse=True)
     results = scored[:top_k]
     md_lines = ["> **Answer (grounded snippets):**\n"]
-    for score, file, page, snippet in results:
-        md_lines.append(f"> - **Source:** {file} | **Page:** {page}\n>   > _{snippet.strip()}_\n")
+    for score, file, page, snippet, start_offset, end_offset in results:
+        md_lines.append(
+            f"> - **Source:** {file} | **Page:** {page} | **Offsets:** {start_offset}-{end_offset}\n"
+            f">   > _{snippet.strip()}_\n"
+        )
     return "\n".join(md_lines)
