@@ -4,6 +4,9 @@ import os
 import html as html_lib
 import re
 import time
+import base64
+# Import TTS engine 
+from engine.tts_handler import tts_engine
 
 # Page Configuration
 st.set_page_config(
@@ -12,6 +15,17 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+import glob
+
+# --- audio cleanup ---
+TEMP_AUDIO_DIR = "temp_audio"
+if os.path.exists(TEMP_AUDIO_DIR):
+    for audio_file in glob.glob(os.path.join(TEMP_AUDIO_DIR, "*.wav")):
+        try:
+            os.remove(audio_file)
+        except Exception:
+            pass # File might be playing 
 
 # load css
 def load_css(file_path):
@@ -73,6 +87,43 @@ def _safe_filename(name: str, default: str) -> str:
     safe = _SAFE_FILENAME_RE.sub("_", base).strip("._")
     return safe or default
 
+# render the agent
+def render_agent_audio(audio_path, title="🎙️ AI Agent Dictation"):
+    """Wraps the audio player in a premium custom HTML card."""
+    with open(audio_path, "rb") as f:
+        audio_bytes = f.read()
+    
+    # Encode the audio so we can embed it directly in the HTML
+    audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+    
+    # Custom CSS and HTML structure using flexible rgba colors for dark/light mode compatibility
+    custom_html = f"""
+    <div style="
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        border-radius: 8px;
+        padding: 12px 15px;
+        background: rgba(128, 128, 128, 0.05);
+        display: flex;
+        align-items: center;
+        margin-top: 10px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    ">
+        <div style="margin-right: 15px; font-size: 1.8em;">🤖</div>
+        <div style="flex-grow: 1;">
+            <div style="font-size: 0.9em; font-weight: 600; opacity: 0.8; margin-bottom: 6px; font-family: sans-serif;">
+                {title}
+            </div>
+            <audio controls style="width: 100%; height: 35px; border-radius: 4px; outline: none;">
+                <source src="data:audio/wav;base64,{audio_base64}" type="audio/wav">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+    </div>
+    """
+    st.markdown(custom_html, unsafe_allow_html=True)
+
+# reading the page url
 def _read_url_page():
     try:
         qp = st.query_params 
@@ -228,7 +279,7 @@ elif current_page == "Mapper":
     with col1:
         search_query = st.text_input("Enter IPC Section", placeholder="e.g., 420, 302, 378")
     with col2:
-        st.write("##") # Spacer
+        st.write("#") # Spacer
         search_btn = st.button("🔍 Find BNS Eq.", use_container_width=True)
 
     # --- STEP 1: Handle Search Logic & State ---
@@ -295,9 +346,20 @@ elif current_page == "Mapper":
 
         with col_c:
             if st.button("📝 Summarize Note", use_container_width=True):
+                st.session_state['active_analysis'] = None
+                st.session_state['active_view_text'] = False
                 summary = llm_summarize(notes, question=f"Changes in {ipc}?")
                 if summary: 
                     st.success(f"Summary: {summary}")
+
+                    # --- TTS INTEGRATION START (Summary) ---
+                    with st.spinner("🎙️ Agent is preparing audio..."):
+                        audio_path = tts_engine.generate_audio(summary, "temp_summary.wav")
+                        if audio_path and os.path.exists(audio_path):
+                            # Replace st.audio with your new custom UI function
+                            render_agent_audio(audio_path, title="Legal Summary Dictation")
+                    # --- TTS INTEGRATION END ---
+
                 else:
                     st.error("❌ LLM Engine failed to generate summary.")
 
@@ -323,9 +385,19 @@ elif current_page == "Mapper":
                     with c2:
                         st.markdown("**🤖 AI Comparison**")
                         st.success(analysis_text)
+
                     with c3:
                         st.markdown(f"**⚖️ {bns} Text**")
                         st.warning(comp_result.get('bns_text', 'No text available.'))
+
+                    with c2:
+                        # --- TTS INTEGRATION START (AI Analysis) ---
+                        with st.spinner("🎙️ Agent is analyzing text for dictation..."):
+                            audio_path = tts_engine.generate_audio(analysis_text, "temp_analysis.wav")
+                            if audio_path and os.path.exists(audio_path):
+                                # Replace st.audio with your new custom UI function
+                                render_agent_audio(audio_path, title="AI Transition Analysis")
+                        # --- TTS INTEGRATION END ---
 
         # 2. Raw Text View
         elif st.session_state.get('active_view_text'):
@@ -375,40 +447,48 @@ elif current_page == "OCR":
             st.image(uploaded_file, width=500)
     
     with col2:
-       if st.button("🔧 Extract & Analyze", use_container_width=True):
+        if st.button("🔧 Extract & Analyze", use_container_width=True):
+            # Fixed the indentation for this entire block so it executes inside the button click!
+            if uploaded_file is None:
+                st.warning("⚠ Please upload a file first.")
+                st.stop()
 
-        if uploaded_file is None:
-            st.warning("⚠ Please upload a file first.")
-            st.stop()
+            if not ENGINES_AVAILABLE:
+                st.error("❌ OCR Engine not available.")
+                st.stop()
 
-        if not ENGINES_AVAILABLE:
-            st.error("❌ OCR Engine not available.")
-            st.stop()
+            try:
+                with st.spinner("🔍 Extracting text... Please wait"):
+                    raw = uploaded_file.getvalue()   # <-- change here
+                    extracted = extract_text(raw)
 
-        try:
-            with st.spinner("🔍 Extracting text... Please wait"):
-                raw = uploaded_file.getvalue()   # <-- change here
-                extracted = extract_text(raw)
+                if not extracted or not extracted.strip():
+                    st.warning("⚠ No text detected in the uploaded image.")
+                    st.stop()
 
-            if not extracted or not extracted.strip():
-              st.warning("⚠ No text detected in the uploaded image.")
-              st.stop()
+                st.success("✅ Text extraction completed!")
+                st.text_area("Extracted Text", extracted, height=300)
 
-            st.success("✅ Text extraction completed!")
-            st.text_area("Extracted Text", extracted, height=300)
+                with st.spinner("🤖 Generating action items..."):
+                    summary = llm_summarize(extracted, question="Action items?")
 
-            with st.spinner("🤖 Generating action items..."):
-                summary = llm_summarize(extracted, question="Action items?")
+                if summary:
+                    st.success("✅ Analysis completed!")
+                    st.info(f"**Action Item:** {summary}")
 
-            if summary:
-                st.success("✅ Analysis completed!")
-                st.info(f"**Action Item:** {summary}")
-            else:
-                st.warning("⚠ No action items found.")
+                    # --- TTS INTEGRATION START (OCR Action Items) ---
+                    with st.spinner("🎙️ Agent is preparing action items dictation..."):
+                        audio_path = tts_engine.generate_audio(summary, "temp_ocr.wav")
+                        if audio_path and os.path.exists(audio_path):
+                            render_agent_audio(audio_path, title="Action Items Dictation")
+                    # --- TTS INTEGRATION END ---
 
-        except Exception as e:
-            st.error("🚨 Something went wrong during OCR processing.")
-            st.exception(e)
+                else:
+                    st.warning("⚠ No action items found.")
+
+            except Exception as e:
+                st.error("🚨 Something went wrong during OCR processing.")
+                st.exception(e)
 
 
 # ============================================================================
@@ -473,6 +553,15 @@ elif current_page == "Fact":
             if res:
                 st.success("✅ Verification complete!")
                 st.markdown(res)
+                
+                # --- TTS INTEGRATION START (Fact Checker) ---
+                with st.spinner("🎙️ Agent is preparing the verbal citation..."):
+                    # Pass the 'res' string directly to the audio engine
+                    audio_path = tts_engine.generate_audio(res, "temp_fact_check.wav")
+                    if audio_path and os.path.exists(audio_path):
+                        render_agent_audio(audio_path, title="Legal Fact Dictation")
+                # --- TTS INTEGRATION END ---
+                
             else:
                 st.info("⚠ No citations found for this query.")
 
