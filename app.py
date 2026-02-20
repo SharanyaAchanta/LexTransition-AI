@@ -36,6 +36,106 @@ def load_css(file_path):
 # Load external CSS file
 load_css("assets/styles.css")
 
+
+def apply_theme(theme_mode: str):
+    """Apply lightweight theme overrides without changing layout structure."""
+    is_light = theme_mode == "light"
+
+    if is_light:
+        theme_css = """
+        <style>
+        :root {
+            --app-bg: #f6f8fb;
+            --surface-bg: #ffffff;
+            --text-color: #1f2937;
+            --muted-text: #4b5563;
+            --border-color: #d1d5db;
+        }
+
+        [data-testid="stAppViewContainer"],
+        [data-testid="stSidebar"] {
+            background: var(--app-bg);
+        }
+
+        [data-testid="stHeader"] {
+            background: transparent;
+        }
+
+        [data-testid="stSidebar"] > div {
+            background: var(--surface-bg);
+            border-right: 1px solid var(--border-color);
+        }
+
+        [data-testid="stAppViewContainer"] .main,
+        [data-testid="stAppViewContainer"] .block-container {
+            background: transparent;
+            color: var(--text-color);
+        }
+
+        [data-testid="stMarkdownContainer"],
+        [data-testid="stText"],
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+            color: var(--text-color);
+        }
+
+        [data-testid="stTextInput"] input,
+        [data-testid="stTextArea"] textarea,
+        [data-testid="stSelectbox"] > div,
+        [data-testid="stFileUploader"] section {
+            background: var(--surface-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        [data-testid="stButton"] > button,
+        [data-testid="stDownloadButton"] > button {
+            border: 1px solid var(--border-color);
+            background: var(--surface-bg);
+            color: var(--text-color);
+        }
+
+        .sidebar-badge,
+        .top-chip,
+        .top-credit {
+            color: var(--muted-text) !important;
+        }
+        </style>
+        """
+    else:
+        theme_css = """
+        <style>
+        :root {
+            --app-bg: #0e1117;
+            --surface-bg: #111827;
+            --text-color: #f3f4f6;
+            --border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        [data-testid="stAppViewContainer"],
+        [data-testid="stSidebar"] {
+            background: var(--app-bg);
+        }
+
+        [data-testid="stSidebar"] > div {
+            background: var(--surface-bg);
+            border-right: 1px solid var(--border-color);
+        }
+
+        [data-testid="stButton"] > button,
+        [data-testid="stDownloadButton"] > button {
+            border-color: var(--border-color);
+        }
+        </style>
+        """
+
+    st.markdown(theme_css, unsafe_allow_html=True)
+
+
+if "theme_mode" not in st.session_state:
+    st.session_state.theme_mode = "dark"
+
+apply_theme(st.session_state.theme_mode)
+
 # --- ENGINE LOADING WITH DEBUGGING ---
 IMPORT_ERROR = None
 try:
@@ -164,6 +264,16 @@ nav_items = [
 # Sidebar Navigation for Mobile
 with st.sidebar:
     st.markdown('<div class="sidebar-title">LexTransition AI</div>', unsafe_allow_html=True)
+    light_mode_enabled = st.toggle(
+        "Light mode",
+        value=st.session_state.theme_mode == "light",
+        help="Switch between light and dark appearance",
+    )
+    selected_mode = "light" if light_mode_enabled else "dark"
+    if selected_mode != st.session_state.theme_mode:
+        st.session_state.theme_mode = selected_mode
+        st.rerun()
+
     for page, label in nav_items:
         if st.button(label, key=f"side_{page}", use_container_width=True):
             st.session_state.current_page = page
