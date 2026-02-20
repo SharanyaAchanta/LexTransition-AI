@@ -5,6 +5,7 @@ import html as html_lib
 import re
 import time
 import base64
+import requests
 # Import TTS engine 
 from engine.tts_handler import tts_engine
 
@@ -88,6 +89,64 @@ def _safe_filename(name: str, default: str) -> str:
     safe = _SAFE_FILENAME_RE.sub("_", base).strip("._")
     return safe or default
 
+
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_github_repo_stats(repo: str):
+    base_url = "https://api.github.com"
+    headers = {"Accept": "application/vnd.github+json"}
+
+    try:
+        repo_resp = requests.get(f"{base_url}/repos/{repo}", headers=headers, timeout=8)
+        repo_resp.raise_for_status()
+        repo_data = repo_resp.json()
+
+        issues_resp = requests.get(
+            f"{base_url}/search/issues",
+            headers=headers,
+            params={"q": f"repo:{repo} type:issue state:open"},
+            timeout=8,
+        )
+        issues_resp.raise_for_status()
+        issues_data = issues_resp.json()
+
+        prs_resp = requests.get(
+            f"{base_url}/search/issues",
+            headers=headers,
+            params={"q": f"repo:{repo} type:pr state:open"},
+            timeout=8,
+        )
+        prs_resp.raise_for_status()
+        prs_data = prs_resp.json()
+
+        return {
+            "ok": True,
+            "stars": int(repo_data.get("stargazers_count", 0)),
+            "forks": int(repo_data.get("forks_count", 0)),
+            "issues": int(issues_data.get("total_count", 0)),
+            "pull_requests": int(prs_data.get("total_count", 0)),
+        }
+    except requests.exceptions.RequestException as exc:
+        return {"ok": False, "error": f"GitHub stats unavailable ({exc})"}
+    except Exception:
+        return {"ok": False, "error": "GitHub stats unavailable right now."}
+
+
+def render_github_repo_stats(repo: str):
+    stats = fetch_github_repo_stats(repo)
+    st.markdown("---")
+    st.markdown("**GitHub Stats**")
+
+    if not stats.get("ok"):
+        st.caption("⚠️ Unable to load live repository stats.")
+        return
+
+    c1, c2 = st.columns(2)
+    c3, c4 = st.columns(2)
+    c1.metric("⭐ Stars", stats["stars"])
+    c2.metric("🍴 Forks", stats["forks"])
+    c3.metric("🐞 Issues", stats["issues"])
+    c4.metric("🔀 PRs", stats["pull_requests"])
+
 # render the agent
 def render_agent_audio(audio_path, title="🎙️ AI Agent Dictation"):
     """Wraps the audio player in a premium custom HTML card."""
@@ -169,6 +228,7 @@ with st.sidebar:
             st.session_state.current_page = page
             st.rerun()
     st.markdown('<div class="sidebar-badge">Offline Mode • V1.0</div>', unsafe_allow_html=True)
+    render_github_repo_stats("SharanyaAchanta/LexTransition-AI")
 
 header_links = []
 for page, label in nav_items:
