@@ -126,7 +126,7 @@ st.markdown(
 
 # Attempt to import engines (use stubs if missing)
 try:
-    from engine.ocr_processor import extract_text, available_engines
+    from engine.ocr_processor import extract_text, extract_text_batch, available_engines
     from engine.mapping_logic import map_ipc_to_bns, add_mapping
     from engine.rag_engine import search_pdfs, add_pdf, index_pdfs
     from engine.llm import summarize as llm_summarize
@@ -411,41 +411,190 @@ elif current_page == "Mapper":
 # ============================================================================
 elif current_page == "OCR":
     st.markdown("## 🖼️ Document OCR")
-    st.markdown("Extract text and key action items from legal notices, FIRs, and scanned documents.")
+    st.markdown("Extract text and key action items from legal notices, FIRs, and scanned documents. Upload multiple documents for batch processing.")
     st.divider()
+    
+    # Initialize session state for batch processing
+    if "batch_results" not in st.session_state:
+        st.session_state.batch_results = None
+    if "batch_summaries" not in st.session_state:
+        st.session_state.batch_summaries = {}
+    if "processing_complete" not in st.session_state:
+        st.session_state.processing_complete = False
     
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.markdown("### Upload a legal Document")
-        uploaded_file = st.file_uploader("Upload (FIR/Notice)", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+        st.markdown("### Upload Legal Documents")
+        st.markdown("**Single or Multiple Files Supported**")
+        uploaded_files = st.file_uploader(
+            "Upload (FIR/Notice)", 
+            type=["jpg", "png", "jpeg"], 
+            accept_multiple_files=True,
+            label_visibility="collapsed",
+            key="batch_uploader"
+        )
         
-        if uploaded_file:
-            st.markdown("### Preview")
-            st.image(uploaded_file, use_column_width=True)
+        if uploaded_files:
+            st.markdown(f"**{len(uploaded_files)} file(s) selected**")
+            
+            # Show processing queue with status indicators
+            st.markdown("### Processing Queue")
+            for i, file in enumerate(uploaded_files):
+                status = "Pending"
+                if st.session_state.batch_results and file.name in st.session_state.batch_results:
+                    result = st.session_state.batch_results[file.name]
+                    status = "Complete" if result['status'] == 'success' else "Error"
+                st.markdown(f"- **{file.name}**: {status}")
     
     with col2:
-        if uploaded_file:
-            st.markdown("### Extracted Text")
-            if st.button("🔧 Extract & Analyze", use_container_width=True):
-                if ENGINES_AVAILABLE:
-                    raw = uploaded_file.read()
-                    extracted = extract_text(raw)
-                    st.code(extracted, language="text")
+        if uploaded_files:
+            # Process button
+            process_btn = st.button("Extract & Analyze All", use_container_width=True, key="batch_process_btn")
+            
+            if process_btn and ENGINES_AVAILABLE:
+                # Create progress bar
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                # Initialize results storage
+                results = {}
+                summaries = {}
+                total_files = len(uploaded_files)
+                
+                # Process each file with progress updates
+                for i, file in enumerate(uploaded_files):
+                    status_text.text(f"Processing: {file.name} ({i+1}/{total_files})")
+                    progress_bar.progress((i + 1) / total_files)
                     
-                    # Try LLM summary
-                    summary = llm_summarize(extracted, question="What actions should the user take?")
-                    if summary:
-                        with st.expander("📝 Simplified Action Item"):
-                            st.markdown(summary)
+                    try:
+                        # Reset file pointer and read
+                        file.seek(0)
+                        raw = file.read()
+                        extracted = extract_text(raw)
+                        
+                        # Get summary
+                        summary = llm_summarize(extracted, question="What actions should the user take?")
+                        
+                        results[file.name] = {
+                            'text': extracted,
+                            'status': 'success',
+                            'error': None
+                        }
+                        summaries[file.name] = summary
+                    except Exception as e:
+                        results[file.name] = {
+                            'text': '',
+                            'status': 'error',
+                            'error': str(e)
+                        }
+                        summaries[file.name] = None
+                
+                # Store results in session state
+                st.session_state.batch_results = results
+                st.session_state.batch_summaries = summaries
+                st.session_state.processing_complete = True
+                
+                # Complete the progress
+                progress_bar.progress(100)
+                status_text.text("Processing complete!")
+                
+            # Display results
+            if st.session_state.batch_results and st.session_state.processing_complete:
+                st.markdown("---")
+                st.markdown("### Results")
+                
+                # Download All Summaries button
+                if st.session_state.batch_summaries:
+                    # Combine all summaries
+                    combined_summary = "=" * 50 + "\n"
+                    combined_summary += "BATCH OCR PROCESSING - ALL SUMMARIES\n"
+                    combined_summary += "=" * 50 + "\n\n"
+                    
+                    for filename, summary in st.session_state.batch_summaries.items():
+                        combined_summary += f"--- {filename} ---\n"
+                        if summary:
+                            combined_summary += f"{summary}\n"
+                        else:
+                            combined_summary += "No summary available\n"
+                        combined_summary += "\n"
+                    
+                    st.download_button(
+                        label="Download All Summaries",
+                        data=combined_summary,
+                        file_name="all_document_summaries.txt",
+                        mime="text/plain",
+                        use_container_width=True
+                    )
+                
+                # Display expandable cards for each document
+                for filename, result in st.session_state.batch_results.items():
+                    with st.expander(f"Document: {filename}", expanded=True):
+                        if result['status'] == 'success':
+                            st.markdown(f"**Status:** Processed Successfully")
+                            
+                            # Show extracted text
+                            with st.expander("Extracted Text"):
+                                st.code(result['text'], language="text")
+                            
+                            # Show summary
+                            summary = st.session_state.batch_summaries.get(filename)
+                            if summary:
+                                with st.expander("Action Items"):
+                                    st.markdown(summary)
+                        else:
+                            st.markdown(f"**Status:** Error")
+                            st.error(f"Error: {result.get('error', 'Unknown error')}")
+                
+                # Aggregate action items section
+                st.markdown("---")
+                st.markdown("### Aggregate Action Items")
+                
+                all_summaries = [s for s in st.session_state.batch_summaries.values() if s]
+                if all_summaries:
+                    # Combine all summaries for aggregate view
+                    combined_text = "\n\n".join(all_summaries)
+                    aggregate_summary = llm_summarize(
+                        combined_text, 
+                        question="What are ALL the action items the user needs to take across all documents? List them clearly."
+                    )
+                    if aggregate_summary:
+                        st.markdown(aggregate_summary)
+                    else:
+                        # Fallback to listing all individual summaries
+                        for i, summary in enumerate(all_summaries, 1):
+                            st.markdown(f"**Document {i}:** {summary}")
                 else:
-                    st.code("NOTICE UNDER SECTION 41A CrPC...", language="text")
-                    st.markdown("**Simplified Action Item:** The police want you to join the investigation. No immediate arrest required.")
+                    st.info("No action items available from processed documents.")
             
             # Engine info
-            if ENGINES_AVAILABLE:
+            if ENGINES_AVAILABLE and not st.session_state.processing_complete:
                 engines = available_engines()
-                st.info(f"✓ OCR Engines: {', '.join(engines) if engines else 'Default'}")
+                st.info(f"OCR Engines: {', '.join(engines) if engines else 'Default'}")
+            
+            # Fallback for non-engine mode
+            if not ENGINES_AVAILABLE and uploaded_files and st.button("Extract & Analyze All", use_container_width=True, key="fallback_batch"):
+                # Demo results for testing without OCR
+                st.session_state.batch_results = {
+                    f.name: {
+                        'text': "NOTICE UNDER SECTION 41A CrPC... (OCR not configured). Install easyocr/pytesseract & tesseract binary for production.",
+                        'status': 'success',
+                        'error': None
+                    } for f in uploaded_files
+                }
+                st.session_state.batch_summaries = {
+                    f.name: "The police want you to join the investigation. No immediate arrest required." for f in uploaded_files
+                }
+                st.session_state.processing_complete = True
+                st.rerun()
+            
+            # Clear results button
+            if st.session_state.processing_complete:
+                if st.button("Clear Results", use_container_width=True):
+                    st.session_state.batch_results = None
+                    st.session_state.batch_summaries = {}
+                    st.session_state.processing_complete = False
+                    st.rerun()
 
 # ============================================================================
 # PAGE: GROUNDED FACT CHECKER
