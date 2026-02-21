@@ -14,10 +14,12 @@ class LegalTTSAgent:
             # On Linux/Docker, search for the 'piper'
             self.piper_exe = shutil.which("piper")
 
-        if os.path.exists(self.piper_exe) and os.path.exists(self.model_path):
+        # [FIX] Check if piper_exe is not None before calling os.path.exists
+        if self.piper_exe and os.path.exists(self.piper_exe) and os.path.exists(self.model_path):
             print("TTS Agent loaded successfully (Subprocess)!")
         else:
-            print("Missing Piper binary or model file.")
+            self.piper_exe = None
+            print("Missing Piper binary or model file. TTS disabled.")
 
     def sanitize_legal_text(self, text):
         """Translates raw markdown and abbreviations into natural speech."""
@@ -35,6 +37,10 @@ class LegalTTSAgent:
 
     def generate_audio(self, text, filename="agent_voice.wav"):
         """Calls the Piper binary to synthesize speech and saves it to a temp folder."""
+        if not self.piper_exe:
+            print("TTS is disabled: Piper binary not found.")
+            return None
+
         clean_text = self.sanitize_legal_text(text)
         
         # 1. Ensure our dedicated temp directory exists
