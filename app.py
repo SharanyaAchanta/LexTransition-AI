@@ -8,6 +8,15 @@ import base64
 # Import TTS engine 
 from engine.tts_handler import tts_engine
 
+# ===== READ THEME FROM URL =====
+query_theme = st.query_params.get("theme")
+
+if "theme" not in st.session_state:
+    if query_theme:
+        st.session_state.theme = query_theme
+    else:
+        st.session_state.theme = "dark"
+
 # Page Configuration
 st.set_page_config(
     page_title="LexTransition AI",
@@ -35,6 +44,118 @@ def load_css(file_path):
 
 # Load external CSS file
 load_css("assets/styles.css")
+
+# ================= THEME SYSTEM =================
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+    
+def toggle_theme():
+    new_theme = "light" if st.session_state.theme == "dark" else "dark"
+    st.session_state.theme = new_theme
+    
+    # save in URL (IMPORTANT)
+    st.query_params["theme"] = new_theme
+
+# toggle button
+col1, col2 = st.columns([10,1])
+with col2:
+    icon = "🌙" if st.session_state.theme == "dark" else "☀️"
+    if st.button(icon):
+        toggle_theme()
+        st.rerun()
+
+
+# APPLY THEME FIRST (VERY IMPORTANT)
+if st.session_state.theme == "light":
+    st.markdown("""
+    <style>
+
+    html, body, .stApp {
+        background:#f8fafc !important;
+    }
+
+    [data-testid="stAppViewContainer"]{
+        background:#f8fafc !important;
+    }
+
+    /* TEXT */
+    h1,h2,h3,h4,h5,h6,p,span,label,div{
+        color:#0f172a !important;
+    }
+
+    /* HEADER */
+    .top-header{
+        background:#ffffff!important;
+        border:1px solid rgba(0,0,0,0.08)!important;
+    }
+
+    .top-brand,.top-nav-link{
+        color:#0f172a!important;
+    }
+
+    /* HOME CARDS */
+    .home-card{
+        background:#ffffff !important;
+        border:1px solid rgba(0,0,0,0.08)!important;
+        box-shadow:0 4px 12px rgba(0,0,0,0.08)!important;
+    }
+
+    .home-card-title{color:#0f172a!important;}
+    .home-card-desc{color:#334155!important;}
+    .home-what{color:#0f172a!important;}
+
+    /* OCR UPLOAD BOX */
+    [data-testid="stFileUploader"]{
+        background:#ffffff !important;
+        border:2px dashed #cbd5e1 !important;
+        border-radius:12px !important;
+        padding:20px !important;
+    }
+
+    section[data-testid="stFileUploaderDropzone"]{
+        background:#f8fafc !important;
+        border:2px dashed #94a3b8 !important;
+    }
+
+    section[data-testid="stFileUploaderDropzone"] span{
+        color:#0f172a !important;
+        font-weight:600;
+    }
+
+    /* SIDEBAR */
+    [data-testid="stSidebarNav"]{
+        background:#ffffff !important;
+    }
+
+    /* BUTTON */
+    .stButton>button{
+        background:#2563eb!important;
+        color:white!important;
+        border:none!important;
+    }
+
+    [data-testid="stFileUploader"] button {
+        background:#2563eb !important;
+        color:#ffffff !important;
+        border:none !important;
+        padding:10px 18px !important;
+        border-radius:8px !important;
+        font-weight:600 !important;
+    }
+    
+    /* hover */
+    [data-testid="stFileUploader"] button:hover {
+        background:#1d4ed8 !important;
+        color:#fff !important;
+    }
+    
+    /* remove black default */
+    [data-testid="stFileUploader"] button span{
+        color:white !important;
+    }
+
+    </style>
+    """, unsafe_allow_html=True)
 
 # --- ENGINE LOADING WITH DEBUGGING ---
 IMPORT_ERROR = None
@@ -175,14 +296,16 @@ for page, label in nav_items:
     page_html = html_lib.escape(page)
     label_html = html_lib.escape(label)
     active_class = "active" if st.session_state.current_page == page else ""
+    current_theme = st.session_state.get("theme", "dark")
+
     header_links.append(
-        f'<a class="top-nav-link {active_class}" href="?page={page_html}" target="_self" '
-        f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
-    )
+         f'<a class="top-nav-link {active_class}" href="?page={page_html}&theme={current_theme}" target="_self" '
+         f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
+    ) 
 
 st.markdown(
     f"""
-<a class="site-logo" href="?page=Home" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
+<a class="site-logo" href="?page=Home&theme={st.session_state.theme}" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
 
 <div class="top-header">
   <div class="top-header-inner">
@@ -200,6 +323,73 @@ st.markdown(
 )
 
 current_page = st.session_state.current_page
+
+ light-mode-fix
+# ============================================================================
+# PAGE: HOME
+# ============================================================================
+if current_page == "Home":
+    st.markdown('<div class="home-header">', unsafe_allow_html=True)
+    st.markdown('<div class="home-title">⚖️ LexTransition AI</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="home-subtitle">'
+        'Your offline legal assistant powered by AI. Analyze documents, map sections, and get instant legal insights—no internet required.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown('<div class="home-what">What do you want to do?</div>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
+        st.markdown(f"""
+        <a class="home-card" href="?page=Mapper&theme={st.session_state.theme}" target="_self">
+            <div class="home-card-header">
+                <span class="home-card-icon">✓</span>
+                <div class="home-card-title">Convert IPC to BNS</div>
+            </div>
+            <div class="home-card-desc">Map old IPC sections to new BNS equivalents.</div>
+            <div class="home-card-btn"><span>Open Mapper</span><span>›</span></div>
+        </a>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""
+        <a class="home-card" href="?page=OCR&theme={st.session_state.theme}" target="_self">
+            <div class="home-card-header">
+                <span class="home-card-icon">📄</span>
+                <div class="home-card-title">Analyze FIR / Notice</div>
+            </div>
+            <div class="home-card-desc">Extract text and action points from documents.</div>
+            <div class="home-card-btn"><span>Upload & Analyze</span><span>›</span></div>
+        </a>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col3, col4 = st.columns(2, gap="large")
+    with col3:
+        st.markdown(f"""
+        <a class="home-card" href="?page=Fact&theme={st.session_state.theme}" target="_self">
+            <div class="home-card-header">
+                <span class="home-card-icon">📚</span>
+                <div class="home-card-title">Legal Research</div>
+            </div>
+            <div class="home-card-desc">Search and analyze case law and statutes.</div>
+            <div class="home-card-btn"><span>Start Research</span><span>›</span></div>
+        </a>
+        """, unsafe_allow_html=True)
+    with col4:
+        st.markdown(f"""
+        <a class="home-card" href="?page=Settings&theme={st.session_state.theme}" target="_self">
+            <div class="home-card-header">
+                <span class="home-card-icon">⚙️</span>
+                <div class="home-card-title">Settings</div>
+            </div>
+            <div class="home-card-desc">Configure engines and offline settings.</div>
+            <div class="home-card-btn"><span>Configure</span><span>›</span></div>
+        </a>
+        """, unsafe_allow_html=True)
 
 try:
     # ============================================================================
