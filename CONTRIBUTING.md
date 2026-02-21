@@ -18,9 +18,9 @@ LexTransition-AI is an open-source, offline-first legal assistant designed to he
 
 ## 🐍 Development Environment Setup
 
-### Prerequisites
+### Prerequisites:
 
-Before you begin, ensure you have the following installed:
+> Before you begin, ensure you have the following installed:
 
 | Tool | Version | Purpose |
 |------|---------|---------|
@@ -30,6 +30,8 @@ Before you begin, ensure you have the following installed:
 | **Ollama** | Latest | Required for Local LLM & Embeddings |
 | **Tesseract OCR** | Latest | *(Optional)* For pytesseract support |
 
+---
+
 ### Step 1: Fork & Clone the Repository
 
 ```bash
@@ -37,6 +39,7 @@ Before you begin, ensure you have the following installed:
 git clone https://github.com/<your-username>/LexTransition-AI.git
 cd LexTransition-AI
 ```
+---
 
 ### Step 2: Create a Virtual Environment
 
@@ -80,7 +83,7 @@ where python
 <details>
 <summary><strong>🪟 Windows (Command Prompt)</strong></summary>
 
-```cmd
+```powershell
 # Create virtual environment
 python -m venv venv
 
@@ -93,14 +96,17 @@ where python
 
 </details>
 
+---
+
 ### Step 3: Install Dependencies
 
 ```bash
 # Install all required packages
 pip install -r requirements.txt
 ```
+---
 
-**Current dependencies include:**
+### Current dependencies include:
 - `streamlit>=1.15` — Web UI framework
 - `pillow` — Image processing
 - `pdfplumber` — PDF text extraction
@@ -108,9 +114,11 @@ pip install -r requirements.txt
 - `reportlab` — PDF generation
 - `requests` — HTTP library
 
+---
+
 ### Step 4: (Optional) Install OCR Dependencies
 
-For full OCR functionality with `pytesseract`:
+> For full OCR functionality with `pytesseract`:
 
 ```bash
 # Ubuntu/Debian
@@ -122,15 +130,15 @@ brew install tesseract
 # Windows — Download installer from:
 # https://github.com/UB-Mannheim/tesseract/wiki
 ```
+---
 
 ### Step 5: (Optional) Install Embedding & RAG Dependencies
 
-For embedding-based RAG functionality:
+> For embedding-based RAG functionality:
 
 ```bash
 pip install sentence-transformers numpy faiss-cpu
 ```
-
 ---
 
 ## 🧠 Model & Data Setup
@@ -144,9 +152,11 @@ streamlit run app.py
 
 The app will open in your browser at `http://localhost:8501`.
 
+---
+
 ### Project Structure Overview
 
-```text
+```css
 LexTransition-AI/
 ├── app.py                 # Streamlit UI (main entry point)
 ├── requirements.txt       # Python dependencies
@@ -162,6 +172,7 @@ LexTransition-AI/
 ├── vector_store/          # FAISS index storage
 └── tests/                 # Test suite
 ```
+---
 
 ### Environment Variables
 
@@ -169,6 +180,8 @@ LexTransition-AI/
 |----------|-------------|---------|
 | `LTA_USE_EMBEDDINGS` | Enable embedding-based RAG | `export LTA_USE_EMBEDDINGS=1` |
 | `LTA_OLLAMA_URL` | Local LLM endpoint (Ollama) | `export LTA_OLLAMA_URL=http://localhost:11434` |
+
+---
 
 ### Using the Fact-Check Feature
 
@@ -181,7 +194,7 @@ LexTransition-AI/
 
 ### Branch Naming Convention
 
-Use descriptive prefixes for your branches:
+> Use descriptive prefixes for your branches:
 
 | Prefix | Use Case | Example |
 |--------|----------|---------|
@@ -190,6 +203,8 @@ Use descriptive prefixes for your branches:
 | `docs/` | Documentation updates | `docs/improve-readme` |
 | `refactor/` | Code refactoring | `refactor/engine-module` |
 | `test/` | Test additions/updates | `test/add-mapper-tests` |
+
+---
 
 ### Step-by-Step Process
 
@@ -237,13 +252,15 @@ Use descriptive prefixes for your branches:
 
 ### Python Standards
 
-We follow **PEP 8** guidelines. Please ensure your code:
+> We follow **PEP 8** guidelines. Please ensure your code:
 
 - Uses **4 spaces** for indentation (no tabs)
 - Limits lines to **88 characters** (Black formatter default)
 - Uses **snake_case** for functions and variables
 - Uses **PascalCase** for class names
 - Includes **docstrings** for functions and classes
+
+---
 
 ### Code Quality Checklist
 
@@ -267,10 +284,11 @@ def map(s):
     x = db[s]
     return x
 ```
+---
 
 ### Comments in AI/ML Code
 
-For complex algorithms and model logic, **please add explanatory comments**:
+> For complex algorithms and model logic, **please add explanatory comments**:
 
 ```python
 # Compute cosine similarity between query embedding and document embeddings
@@ -281,6 +299,7 @@ similarities = np.dot(query_embedding, doc_embeddings.T)
 # This helps with ranking and threshold-based filtering
 probabilities = softmax(similarities)
 ```
+---
 
 ### Recommended Tools
 
@@ -293,7 +312,6 @@ black .
 pip install flake8
 flake8 --max-line-length=88 .
 ```
-
 ---
 
 ## 🐛 Issue Reporting
@@ -304,9 +322,11 @@ flake8 --max-line-length=88 .
 2. Try reproducing the issue with the latest `main` branch
 3. Gather relevant logs and screenshots
 
+---
+
 ### Issue Template
 
-When creating an issue, please include:
+> When creating an issue, please include:
 
 ```markdown
 ## 🐛 Bug Report
@@ -337,12 +357,13 @@ When creating an issue, please include:
 ### Additional Context
 <!-- Any other information that might help -->
 ```
+---
 
 ### Special Cases
 
 #### 🤖 Model Hallucinations / Incorrect Mappings
 
-If the AI produces incorrect legal mappings:
+> If the AI produces incorrect legal mappings:
 
 ```markdown
 ## 🤖 Incorrect Mapping Report
@@ -359,6 +380,7 @@ If the AI produces incorrect legal mappings:
 ### Source Reference
 <!-- Link to official law document or gazette -->
 ```
+---
 
 #### 🖼️ OCR Accuracy Issues
 
@@ -378,7 +400,6 @@ If the AI produces incorrect legal mappings:
 - [ ] EasyOCR
 - [ ] Pytesseract
 ```
-
 ---
 
 ### Beginner-Friendly Areas

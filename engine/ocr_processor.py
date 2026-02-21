@@ -7,11 +7,11 @@ Functions:
 """
 import io
 import streamlit as st
-from typing import List, Dict, Any
+from typing import Any, List
 
 # Load the cached model
 @st.cache_resource(show_spinner=False)
-def load_easyocr_reader():
+def load_easyocr_reader() -> Any:
     """Loads the heavy OCR model into memory only once."""
     print("Loading OCR Model into Memory...")
     import easyocr

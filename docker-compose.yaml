@@ -1,0 +1,12 @@
+services:
+  lextransition-ai:
+    build: .
+    container_name: lextransition_app
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app  # Persists your database and PDF uploads on your real drive
+    environment:
+      # If running on Windows, 'localhost' inside Docker refers to the container. To access your host machine, use 'host.docker.internal'.
+      - LTA_OLLAMA_URL=http://localhost:11434 
+    restart: unless-stopped
