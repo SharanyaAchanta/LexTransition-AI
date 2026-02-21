@@ -54,8 +54,8 @@ def _call_ollama_diff(ipc_text: str, bns_text: str) -> str:
 
     prompt = (
         f"You are a Senior Legal Analyst. Compare the following two Indian laws.\n\n"
-        f"1. OLD LAW (IPC): {ipc_text}\n"
-        f"2. NEW LAW (BNS): {bns_text}\n\n"
+        f"1. Old Law (IPC): {ipc_text}\n"
+        f"2. New Law (BNS): {bns_text}\n\n"
         f"Task: Identify substantive changes. Ignore minor formatting differences.\n"
         f"Output specific bullet points on:\n"
         f"- Punishment Severity (Any increase?)\n"

@@ -9,7 +9,7 @@ from typing import Optional
 
 from utils.timeout_handler import execute_with_timeout_retry, AITimeoutError
 
-OLLAMA_URL: Optional[str] = os.environ.get("LTA_OLLAMA_URL")
+OLLAMA_URL: Optional[str] = os.environ.get("LTA_OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL: str = os.environ.get("LTA_OLLAMA_MODEL", "llama2")
 
 

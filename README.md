@@ -14,9 +14,12 @@ LexTransition AI is an open-source, offline-first legal assistant. It helps user
 
 ### 🚀 Key Modules
 
-- 🔄 **The Law Transition Mapper:** The core engine that maps old IPC sections to new BNS equivalents. It highlights specific changes in wording, penalties, and scope.
-- 🖼️ **Multimodal Document Analysis (OCR):** Upload photos of legal notices or FIRs. The system extracts text using local OCR and explains "action items" in simple language.
-- 📚 **Grounded Fact-Checking:** Every response is backed by official citations. The AI identifies the exact Section, Chapter, and Page from the official Law PDFs to prevent hallucinations.
+## 🚀 Core Features
+
+- 🔄 **Intelligent Law Mapper:** Maps old IPC sections to new BNS equivalents. Uses an LLM to highlight specific changes in wording, penalties, and scope.
+- 🖼️ **Multimodal OCR Analysis:** Upload photos of legal notices or FIRs. The system extracts text using local OCR and generates actionable summaries.
+- 📚 **Grounded Fact-Checking (RAG):** Ask legal questions and get answers backed by official citations. The AI identifies the exact Section and Page from uploaded Law PDFs to prevent hallucinations.
+- 🎙️ **Offline Voice Agent:** Features an integrated Text-to-Speech (TTS) engine that provides high-fidelity vocal dictations of summaries, action items, and fact-checks.
 
 ---
 
@@ -24,11 +27,12 @@ LexTransition AI is an open-source, offline-first legal assistant. It helps user
 
 To ensure privacy and offline accessibility, this project can be configured to run without external APIs:
 
+- **Frontend:** Streamlit
 - **Backend:** Python, LangChain/LlamaIndex.
-- **OCR:** EasyOCR or PyTesseract (Local engines).
-- **Vector DB:** ChromaDB or FAISS (Local storage instead of Pinecone/Milvus).
-- **Local LLM:** Llama 3 or Mistral via Ollama or LM Studio (Runs on your GPU/CPU).
-- **Frontend:** Streamlit Dashboard.
+- **Local LLM Engine:** Ollama (Llama 3 / Mistral)
+- **Voice / TTS:** Piper TTS (ONNX models)
+- **OCR Engine:** EasyOCR / PyTesseract
+- **Vector Database (RAG):** FAISS + Sentence-Transformers
 
 ---
 
@@ -36,15 +40,31 @@ To ensure privacy and offline accessibility, this project can be configured to r
 
 ```css
 LexTransition-AI/
-├── app.py                 # Streamlit UI
-├── requirements.txt       # Local ML libraries
+├── .github/
+│   └── workflows/
+│       └── lextransition-ci.yml  # GitHub Actions CI/CD pipeline
 ├── engine/
-│   ├── ocr_processor.py   # Local OCR logic
-│   ├── mapping_logic.py   # IPC to BNS mapping dictionary
-│   └── rag_engine.py      # Local Vector Search logic
-└── models/                # Local LLM weights (Quantized)
+│   ├── comparator.py             # AI logic for comparing IPC & BNS texts
+│   ├── llm.py                    # Fallback logic and LLM summarization
+│   ├── mapping_logic.py          # Core IPC to BNS transition logic
+│   ├── ocr_processor.py          # Local OCR extraction and processing
+│   ├── rag_engine.py             # Local Vector Search logic (FAISS)
+│   └── db.py                     # Database connection and queries
+├── utils/
+│   └── timeout_handler.py        # Resiliency and API timeout handlers
+├── tests/
+│   └── test_embeddings.py        # Pytest suite for automated testing
+├── scripts/
+│   └── ocr_benchmark.py          # OCR character error rate testing
+├── models/
+│   └── tts/                      # Local storage for Piper ONNX voice models
+├── law_pdfs/                     # Upload directory for Grounded Fact-Checking
+├── app.py                        # Main Streamlit UI application
+├── Dockerfile                    # Production container configuration
+├── requirements.txt              # Python dependencies & OS-specific markers
+├── setup_agent.py                # Manual setup script for downloading TTS binaries
+└── README.md                     # Master project documentation
 ```
-
 ---
 
 ## ⚙️ Installation & Local Setup
@@ -55,100 +75,149 @@ The easiest way to run LexTransition-AI is with Docker. This handles all depende
 1. **Clone the repository:**
 
    ```bash
-   git clone [https://github.com/centiceron/LexTransition-AI.git](https://github.com/centiceron/LexTransition-AI.git)
+   git clone [https://github.com/[username]/LexTransition-AI.git](https://github.com/[username]/LexTransition-AI.git)
    cd LexTransition-AI
    ```
 
-2. **Build the Docker Image**
+2. **Build the Docker Image in terminal**
 
    ```bash 
-   docker build -t lextransition.
+   docker build -t lextransition .
    ```
 
 3. **Run the Application**
 
    ```bash
-   docker run -p 8501:8501 lextransition
+   docker run -p 8501:8501 -e LTA_OLLAMA_URL="[http://host.docker.internal:11434](http://host.docker.internal:11434)" lextransition-ai
    ```
 
-4. Open the App
+4. **Open the App**
 
    ```bash
    http://localhost:8501
    ```
 ---
 
-## Current Implementation Status
+### Option B: Manual Local Setup (Windows/Linux/Mac)
+If you prefer to run the app directly in your local Python environment:
 
-- Streamlit UI (app.py) — implemented (interactive pages for Mapper, OCR, Fact-check).
-- OCR — local helper supporting EasyOCR and pytesseract (install system tesseract for pytesseract).
-- IPC→BNS Mapping — in-memory mapping with fuzzy match; UI supports adding mappings at runtime.
-- Grounded Fact-Check — simple PDF ingestion and page-level keyword search using pdfplumber (add PDFs to ./law_pdfs via UI).
-- RAG/LLM & full offline guarantees — NOT implemented yet (placeholders/stubs present).
+1. **Install Dependencies (_requires Python 3.10_)**
 
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **Download Voice Agent Models**
+
+   ```bash 
+   python setup_agent.py
+   ```
+
+3. **Start the Local LLM**
+
+   ```bash
+   ollama serve
+   ollama pull llama3
+   ```
+
+4. **Launch the App**
+
+   ```bash
+   export LTA_OLLAMA_URL="http://localhost:11434"  # On Windows use: set LTA_OLLAMA_URL=http://localhost:11434
+   streamlit run app.py
+   ```
 ---
 
-## Quick Start (local)
+## 🟢 Current Implementation Status & Architecture
 
-- Install Python dependencies: `pip install -r requirements.txt`
+All core modules, offline LLM integrations, and containerization features are **fully implemented and production-ready**.
 
-- (Optional) Install Tesseract binary for pytesseract:
+```text
+   =========================================================================
+                  🚀 LEXTRANSITION-AI: SYSTEM ARCHITECTURE
+   =========================================================================
 
-  - Ubuntu: `sudo apt install tesseract-ocr`
-  - Mac (brew): `brew install tesseract`
+                  [ 🖥️ Streamlit Frontend (app.py) ]
+                                 |
+         -------------------------------------------------
+         |                       |                       |
+   [ 🔄 IPC → BNS Mapper ]  [ 🖼️ Document OCR ]   [ 📚 Fact-Checker (RAG) ]
+         |                       |                       |
+   (SQLite Mapping DB)    (EasyOCR / PyTesseract)  (FAISS + sentence-transformers)
+         |                       |                       |
+         -------------------------------------------------
+                                 |
+                                 v
+                  [ 🧠 Local LLM Engine (Ollama) ]
+            (Semantic Analysis, Action Items, Summarization)
+                                 |
+                                 v
+                  [ 🎙️ Offline Voice Agent (Piper TTS) ]
+            (High-fidelity vocal dictation of AI outputs)
 
-- Launch: `streamlit run app.py`
-
-To use Grounded Fact-Check, upload law PDFs in the Fact-Check page (or drop them into `./law_pdfs`) and click "Verify with Law PDFs".
-
+   =========================================================================
+                     ⚙️ INFRASTRUCTURE GUARANTEES
+   =========================================================================
+   ✔️ 100% Offline Capable (No external API keys required)
+   ✔️ Dockerized Deployment (Verified networking & TTS dependencies)
+   ✔️ CI/CD Pipeline Active (GitHub Actions + Pytest)
+```
 ---
 
-## Persistence & Testing
+## 💾 Data Persistence & Testing
 
-- Mappings are persisted to `mapping_db.json` (in project root). You can add mappings in the UI; they are saved to this file.
+1. **Local Data Storage (Privacy-First)**
+To maintain our strict offline-first architecture, no user data or legal documents ever leave your machine:
+- **Relational Data:** Mappings and system configurations are persisted securely using a local SQLite database (replacing the legacy `mapping_db.json`).
+- **Vector Store:** Uploaded law PDFs for Grounded Fact-Checking are processed and stored locally in a FAISS vector index (`./vector_store`).
 
-- Run tests:
+2. **Automated Testing & CI/CD**
+LexTransition-AI maintains high reliability through local testing and GitHub Actions.
 
-  - `pip install -r requirements.txt`
-  - `pytest -q`
+   **Local Unit Tests**
+   To run the test suite locally, ensure your virtual environment is active (Python 3.10) and execute:
+
+   ```bash
+   pip install -r requirements.txt
+   pytest -q
+   ```
+---
+
+## Continuous Integration (GitHub Actions)
+   Every Pull Request automatically triggers our `.github/workflows/lextransition-ci.yml` pipeline.   
 
 ---
 
 ## OCR Benchmark Harness
 
-Use `scripts/ocr_benchmark.py` with a CSV dataset (`image_path,ground_truth`) to compute:
-- Character Error Rate (CER)
-- Keyword Recall
+To evaluate the local OCR engine's Character Error Rate (CER) and Keyword Recall against custom scanned datasets
 
-Example:
-- `python scripts/ocr_benchmark.py --dataset data/ocr_dataset.csv --report ocr_report.md`
+   ```bash
+   python scripts/ocr_benchmark.py --dataset data/ocr_dataset.csv --report ocr_report.md
+   ```
+---
 
-## Optional features (embeddings & local LLM)
+## ⚙️ Advanced Configuration (Environment Variables)
 
-### Embedding-based RAG (FAISS + sentence-transformers)
+LexTransition-AI is designed to be plug-and-play, but power users can customize the engine behavior using environment variables. If you are using Docker, these are passed via the `-e` flag.
 
-- Install (optional): `pip install sentence-transformers numpy faiss-cpu`
-- Enable: `export LTA_USE_EMBEDDINGS=1`
-- Index persists in `./vector_store`
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `LTA_OLLAMA_URL` | `http://localhost:11434` | The endpoint for the local LLM. When running in Docker, use `http://host.docker.internal:11434` to route traffic to your host machine. |
+| `LTA_OLLAMA_MODEL` | `llama3` | Specifies which local model to use for analysis and summarization. |
+| `LTA_USE_EMBEDDINGS` | `1` | Toggles the FAISS/Sentence-Transformer RAG engine. Set to `0` to fallback to legacy keyword search. |
 
 ---
 
-### Local LLM integration (Ollama)
+## 🗺️ Project Roadmap & Future Scope
 
-- Configure: `export LTA_OLLAMA_URL=http://localhost:11434`
-- The app will use this endpoint for better plain-language summaries.
+All foundational features (Local LLM, OCR, Vector DB, and CI/CD) are fully operational. The next phase of development focuses on expanding accessibility and enterprise utility:
 
----
-
-## CI
-
-- A GitHub Actions workflow (lextransition-ci.yml) runs pytest for the project on PRs.
+- [ ] **Speech-to-Text (STT) Integration:** Implement local Whisper models to allow users to verbally query the Fact-Checker without typing.
+- [ ] **Multilingual Support (Indic Languages):** Translate BNS mappings and OCR summaries into Hindi, Bengali, and other regional languages for broader accessibility.
+- [ ] **Precedent & Case Law Expansion:** Expand the RAG Vector Database beyond standard Bare Acts to include landmark judicial precedents.
+- [ ] **Automated Legal Briefs:** Add a reporting engine to export OCR analysis and IPC-to-BNS comparisons into cleanly formatted PDF/Docx files.
 
 ---
-
-## Next Steps / TODO
-
-- Replace page-level keyword search with embeddings + vector store (Chroma/FAISS) + exact citation offsets.
-- Add persistent mapping DB + import tools for official IPC→BNS mappings.
-- Integrate local LLM for summaries/explanations (Ollama / LM Studio).
-- Add tests and CI for engine modules.

@@ -5,15 +5,15 @@ Pillow>=10.0.0
 numpy>=1.26.0,<2.0.0
 
 # --- OCR Engines ---
-# easyocr>=1.7.1
-# pytesseract>=0.3.10
+easyocr>=1.7.1
+pytesseract>=0.3.10
 
 # --- Voice Agent ---
 piper-tts==1.2.0; sys_platform != 'win32'
 
 # --- AI/ML (RAG & Embeddings) ---
-# sentence-transformers>=2.5.0
-# faiss-cpu>=1.8.0
+sentence-transformers>=2.5.0
+faiss-cpu>=1.8.0
 
 # --- Database & Data Processing ---
 pandas>=2.0.0
