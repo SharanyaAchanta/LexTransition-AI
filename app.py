@@ -10,6 +10,7 @@ from engine.tts_handler import tts_engine
 from engine.github_stats import get_github_stats, get_github_contributors
 from engine.risk_analyzer import analyze_risk
 from engine.bail_analyzer import analyze_bail
+from engine.summarizer import generate_summary
 
 # ===== READ THEME FROM URL =====
 query_theme = st.query_params.get("theme")
@@ -649,6 +650,26 @@ try:
                             st.write(f"Punishment: {item['punishment']}")
 
                             st.divider()
+
+            # ================= PLAIN LANGUAGE SUMMARY =================
+                    summary_data = generate_summary(extracted)
+
+                    st.markdown("### 📝 Plain-Language Explanation")
+
+                    if summary_data:
+
+                        if summary_data.get("sections"):
+                            st.write("**Sections Detected:**", ", ".join(summary_data["sections"]))
+
+                        if summary_data.get("authorities"):
+                            st.write("**Authorities Involved:**", ", ".join(summary_data["authorities"]))
+
+                        if summary_data.get("action_points"):
+                            st.write("**Recommended Actions:**")
+                            for point in summary_data["action_points"]:
+                                st.write(f"- {point}")
+
+                        st.info(summary_data.get("plain_summary", ""))
 
                     with st.spinner("🤖 Generating action items..."):
                         summary = llm_summarize(extracted, question="Action items?")
