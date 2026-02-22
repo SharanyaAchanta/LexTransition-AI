@@ -69,7 +69,7 @@ url_page = _read_url_page()
 if "pending_page" in st.session_state:
     st.session_state.current_page = st.session_state.pop("pending_page")
 else:
-    if url_page in {"Home", "Mapper", "OCR", "Fact", "Settings"}:
+    if url_page in {"Home", "Mapper", "OCR", "Glossary", "Fact", "Settings"}:
         st.session_state.current_page = url_page
 
 # Helper: navigate via sidebar and keep URL in sync
@@ -87,6 +87,7 @@ nav_items = [
     ("Home", "Home"),
     ("Mapper", "IPC -> BNS Mapper"),
     ("OCR", "Document OCR"),
+    ("Glossary", "Glossary"),
     ("Fact", "Fact Checker"),
     ("Settings", "Settings / About"),
 ]
@@ -131,8 +132,10 @@ try:
     from engine.rag_engine import search_pdfs, add_pdf, index_pdfs
     from engine.llm import summarize as llm_summarize
     from engine.db import import_mappings_from_csv, import_mappings_from_excel, export_mappings_to_json, export_mappings_to_csv
+    from engine.glossary import search_terms, get_autocomplete_terms, get_terms_by_letter, get_all_terms, get_term_count, detect_legal_terms, get_categories, get_term
+    from engine.contributions import submit_term_suggestion, get_pending_contributions, approve_contribution, reject_contribution, get_contribution_count
     ENGINES_AVAILABLE = True
-except Exception:
+except Exception as e:
     ENGINES_AVAILABLE = False
 
 # LLM summarize stub
@@ -152,8 +155,6 @@ if ENGINES_AVAILABLE and not st.session_state.get("pdf_indexed"):
 
 # Get current page
 current_page = st.session_state.current_page
-
-
 
 # ============================================================================
 # PAGE: HOME
@@ -214,6 +215,21 @@ if current_page == "Home":
     
     with col3:
         st.markdown("""
+        <a class="home-card" href="?page=Glossary" target="_self">
+            <div class="home-card-header">
+                <span class="home-card-icon">📖</span>
+                <div class="home-card-title">Legal Glossary</div>
+            </div>
+            <div class="home-card-desc">Search and learn legal terms, Latin maxims, and procedural terms.</div>
+            <div class="home-card-btn">
+                <span>Open Glossary</span>
+                <span>›</span>
+            </div>
+        </a>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown("""
         <a class="home-card" href="?page=Fact" target="_self">
             <div class="home-card-header">
                 <span class="home-card-icon">📚</span>
@@ -226,8 +242,11 @@ if current_page == "Home":
             </div>
         </a>
         """, unsafe_allow_html=True)
+
+    # Third row for Settings
+    col5, col6 = st.columns(2, gap="large")
     
-    with col4:
+    with col5:
         st.markdown("""
         <a class="home-card" href="?page=Settings" target="_self">
             <div class="home-card-header">
@@ -476,17 +495,22 @@ elif current_page == "OCR":
                         # Get summary
                         summary = llm_summarize(extracted, question="What actions should the user take?")
                         
+                        # Detect legal terms in extracted text
+                        legal_terms_found = detect_legal_terms(extracted)
+                        
                         results[file.name] = {
                             'text': extracted,
                             'status': 'success',
-                            'error': None
+                            'error': None,
+                            'legal_terms': legal_terms_found
                         }
                         summaries[file.name] = summary
                     except Exception as e:
                         results[file.name] = {
                             'text': '',
                             'status': 'error',
-                            'error': str(e)
+                            'error': str(e),
+                            'legal_terms': []
                         }
                         summaries[file.name] = None
                 
@@ -537,6 +561,12 @@ elif current_page == "OCR":
                             with st.expander("Extracted Text"):
                                 st.code(result['text'], language="text")
                             
+                            # Show legal terms detected
+                            if result.get('legal_terms'):
+                                with st.expander(f"📖 Legal Terms Found ({len(result['legal_terms'])})"):
+                                    for term_data in result['legal_terms']:
+                                        st.markdown(f"**{term_data['term']}**: {term_data['definition'][:100]}...")
+                            
                             # Show summary
                             summary = st.session_state.batch_summaries.get(filename)
                             if summary:
@@ -579,7 +609,8 @@ elif current_page == "OCR":
                     f.name: {
                         'text': "NOTICE UNDER SECTION 41A CrPC... (OCR not configured). Install easyocr/pytesseract & tesseract binary for production.",
                         'status': 'success',
-                        'error': None
+                        'error': None,
+                        'legal_terms': []
                     } for f in uploaded_files
                 }
                 st.session_state.batch_summaries = {
@@ -595,6 +626,131 @@ elif current_page == "OCR":
                     st.session_state.batch_summaries = {}
                     st.session_state.processing_complete = False
                     st.rerun()
+
+# ============================================================================
+# PAGE: LEGAL GLOSSARY
+# ============================================================================
+elif current_page == "Glossary":
+    st.markdown("## 📖 Legal Glossary")
+    st.markdown("Search and explore legal terms, Latin maxims, and procedural terms used in Indian law.")
+    st.divider()
+    
+    if ENGINES_AVAILABLE:
+        # Get term count
+        term_count = get_term_count()
+        st.markdown(f"**Total Terms:** {term_count}")
+        
+        # Search and Filter Section
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # Search with autocomplete
+            search_query = st.text_input("🔍 Search Terms", placeholder="e.g., prima facie, certiorari, mens rea")
+        
+        with col2:
+            # Category filter
+            categories = get_categories()
+            category_filter = st.selectbox("Category", ["All"] + categories)
+        
+        # Perform search if query exists
+        if search_query:
+            results = search_terms(search_query, limit=50)
+            if results:
+                st.markdown(f"### Found {len(results)} term(s)")
+                for term_data in results:
+                    with st.expander(f"**{term_data['term']}** ({term_data['category']})"):
+                        st.markdown(f"**Definition:** {term_data['definition']}")
+                        if term_data['related_sections']:
+                            st.markdown(f"**Related Sections:** {term_data['related_sections']}")
+                        if term_data['examples']:
+                            st.markdown(f"**Example:** {term_data['examples']}")
+            else:
+                st.info("No terms found matching your search.")
+        
+        # A-Z Alphabetical Index
+        st.markdown("### Browse by Letter")
+        alphabet = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        
+        # Create tabs for letters
+        tabs = st.tabs(alphabet)
+        
+        for i, letter in enumerate(alphabet):
+            with tabs[i]:
+                letter_terms = get_terms_by_letter(letter)
+                if letter_terms:
+                    for term_data in letter_terms:
+                        with st.expander(f"**{term_data['term']}**"):
+                            st.markdown(f"**Definition:** {term_data['definition']}")
+                            if term_data['related_sections']:
+                                st.markdown(f"**Related Sections:** {term_data['related_sections']}")
+                            if term_data['examples']:
+                                st.markdown(f"**Example:** {term_data['examples']}")
+                else:
+                    st.info(f"No terms starting with '{letter}'")
+        
+        st.divider()
+        
+        # Contribute Section
+        st.markdown("### 📝 Contribute a New Term")
+        with st.expander("Submit a New Legal Term"):
+            with st.form("contribute_term"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    term_name = st.text_input("Term")
+                    term_category = st.selectbox("Category", categories if categories else ["General", "Latin Maxim", "Criminal Law", "Civil Law", "Procedural Law"])
+                with col2:
+                    term_sections = st.text_input("Related Sections (optional)")
+                
+                term_definition = st.text_area("Definition")
+                term_examples = st.text_area("Example (optional)")
+                submitter_name = st.text_input("Your Name (optional)", placeholder="Anonymous")
+                
+                submit_btn = st.form_submit_button("Submit Term")
+                
+                if submit_btn and term_name and term_definition:
+                    success = submit_term_suggestion(
+                        term=term_name,
+                        definition=term_definition,
+                        related_sections=term_sections,
+                        examples=term_examples,
+                        category=term_category,
+                        submitter_name=submitter_name
+                    )
+                    if success:
+                        st.success("✓ Term submitted for moderation! Thank you for your contribution.")
+                    else:
+                        st.error("Failed to submit term. Please try again.")
+        
+        # Admin Moderation Section (simple toggle)
+        st.divider()
+        show_moderation = st.checkbox("Show Moderation Queue (Admin)")
+        
+        if show_moderation:
+            pending = get_pending_contributions()
+            if pending:
+                st.markdown(f"### Moderation Queue ({len(pending)} pending)")
+                for contrib in pending:
+                    with st.expander(f"**{contrib['term']}** - by {contrib.get('submitter_name', 'Anonymous')}"):
+                        st.markdown(f"**Definition:** {contrib['definition']}")
+                        st.markdown(f"**Category:** {contrib['category']}")
+                        st.markdown(f"**Submitted:** {contrib['submitted_at']}")
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button(f"Approve #{contrib['id']}", key=f"approve_{contrib['id']}"):
+                                approve_contribution(contrib['id'], reviewed_by="Admin")
+                                st.success("Term approved!")
+                                st.rerun()
+                        with col2:
+                            if st.button(f"Reject #{contrib['id']}", key=f"reject_{contrib['id']}"):
+                                reject_contribution(contrib['id'], reviewed_by="Admin")
+                                st.success("Term rejected!")
+                                st.rerun()
+            else:
+                st.info("No pending contributions.")
+    
+    else:
+        st.warning("Glossary database not available. Please ensure the engine is properly configured.")
 
 # ============================================================================
 # PAGE: GROUNDED FACT CHECKER
