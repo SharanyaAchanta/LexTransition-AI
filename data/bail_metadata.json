@@ -1,0 +1,43 @@
+{
+  "302": {
+    "bailable": "Non-bailable",
+    "cognizable": "Cognizable",
+    "description": "Murder",
+    "procedure": "Police can arrest without warrant. Bail usually granted only by court.",
+    "punishment": "Murder — life imprisonment or death penalty."
+  },
+  "420": {
+    "bailable": "Non-bailable",
+    "cognizable": "Cognizable",
+    "description": "Cheating and dishonestly inducing delivery of property",
+    "procedure": "Court may grant bail depending on circumstances.",
+    "punishment": "Cheating — imprisonment up to 7 years and fine."
+  },
+  "41A": {
+    "bailable": "Bailable",
+    "cognizable": "Non-cognizable",
+    "description": "Notice of appearance before police officer",
+    "procedure": "Person should cooperate with investigation.",
+    "punishment": "No punishment. It is a procedural notice."
+  },
+  "323": {
+    "bailable": "Bailable",
+    "cognizable": "Cognizable",
+    "description": "Voluntarily causing hurt",
+    "procedure": "Bail can be obtained from police station.",
+    "punishment":"punished with imprisonment of either description for a term which may extend to one year, or with fine which may extend to one thousand rupees, or with both"
+  }
+  ,
+  "379": {
+    "bail": "Bailable",
+    "cognizable": "Cognizable",
+    "procedure": "Police can investigate without court order.",
+    "punishment": "Theft — imprisonment up to 3 years or fine or both."
+  },
+  "354": {
+    "bail": "Non-bailable",
+    "cognizable": "Cognizable",
+    "procedure": "Court decides bail depending on case facts.",
+    "punishment": "Assault or criminal force against woman — imprisonment up to 5 years."
+  }
+}
