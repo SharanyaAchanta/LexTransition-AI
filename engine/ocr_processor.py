@@ -63,7 +63,7 @@ def extract_text_batch(file_list: List[Any]) -> Dict[str, Dict[str, Any]]:
         file_list: List of file-like objects with .read() and .name attributes
         
     Returns:
-        Dict with filename as key and dict containing:
+        Dict with the filename as key and dict containing:
             - 'text': extracted text
             - 'status': 'success' or 'error'
             - 'error': error message if failed
