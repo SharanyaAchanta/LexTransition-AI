@@ -10,6 +10,7 @@ pytesseract>=0.3.10
 
 # --- Voice Agent ---
 piper-tts==1.2.0; sys_platform != 'win32'
+gTTS==2.5.1
 
 # --- AI/ML (RAG & Embeddings) ---
 sentence-transformers>=2.5.0
