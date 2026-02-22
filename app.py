@@ -9,6 +9,7 @@ import base64
 from engine.tts_handler import tts_engine
 from engine.github_stats import get_github_stats, get_github_contributors
 from engine.risk_analyzer import analyze_risk
+from engine.bail_analyzer import analyze_bail
 
 # ===== READ THEME FROM URL =====
 query_theme = st.query_params.get("theme")
@@ -628,6 +629,26 @@ try:
                     else:
                         st.write("**Detected Sections:** None")
                     st.info(f"**Guidance:** {guidance}")
+
+                    # ================= BAIL ANALYSIS =================
+                    bail_results = analyze_bail(extracted)
+
+                    if bail_results:
+                        st.markdown("### ⚖️ Bail Eligibility & Procedure")
+
+                        for item in bail_results:
+                            st.write(f"**Section {item['section']} — {item['description']}**")
+
+                            if item["bailable"] == "Non-bailable":
+                                st.error("🔴 Non-bailable")
+                            else:
+                                st.success("🟢 Bailable")
+
+                            st.write(f"Cognizable: {item['cognizable']}")
+                            st.info(f"Procedure: {item['procedure']}")
+                            st.write(f"Punishment: {item['punishment']}")
+
+                            st.divider()
 
                     with st.spinner("🤖 Generating action items..."):
                         summary = llm_summarize(extracted, question="Action items?")
