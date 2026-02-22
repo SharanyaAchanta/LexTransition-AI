@@ -11,7 +11,8 @@ __pycache__/
 venv/
 env/
 
-# Local app data
+# Local app data / DB (binary DB causes merge conflicts; keep local only)
+mapping_db.sqlite
 law_pdfs/*
 !law_pdfs/.gitkeep
 vector_store/*
@@ -19,7 +20,14 @@ vector_store/*
 models/*
 !models/.gitkeep
 
+# --- TTS Agent Dependencies & Temp Files ---
+piper_bin/
+piper_windows.zip
+models/tts/
+temp_audio/
+
 # OS / editor
 .DS_Store
 Thumbs.db
 .vscode/
+mapping_db.sqlite

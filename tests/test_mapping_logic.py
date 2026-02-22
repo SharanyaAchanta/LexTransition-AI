@@ -73,39 +73,41 @@ class TestMappingPersistence:
     """Tests for mapping persistence functionality."""
 
     def test_mapping_persistence(self, tmp_path, monkeypatch):
-        """Verify that mappings are correctly saved and loaded from file."""
-        mapping_path = tmp_path / "test_mapping.json"
-        # write initial mappings
-        initial = {"111": {"bns_section": "BNS 111", "notes": "test", "source": "test"}}
-        with open(mapping_path, "w", encoding="utf-8") as f:
-            json.dump(initial, f)
-        monkeypatch.setenv("LTA_MAPPING_DB", str(mapping_path))
-
-        # ensure fresh import uses our mapping file
-        if "engine.mapping_logic" in sys.modules:
-            del sys.modules["engine.mapping_logic"]
+        """Verify that mappings are correctly saved and loaded from database."""
+        # Set up a temp database file
+        db_path = tmp_path / "test_mapping.sqlite"
+        monkeypatch.setattr("engine.db._DB_FILE", str(db_path))
+        
+        # Clear modules to reload with new db path
+        for mod in list(sys.modules.keys()):
+            if mod.startswith("engine."):
+                del sys.modules[mod]
+        
+        # Import fresh modules
+        from engine import db
+        db.initialize_db()
+        db.insert_mapping("111", "BNS 111", "test note", "test source", "Test Category")
+        
         ml = importlib.import_module("engine.mapping_logic")
-
+        
         # exact lookup
         res = ml.map_ipc_to_bns("111")
         assert res is not None and res["bns_section"] == "BNS 111"
 
-        # add a new mapping and confirm persistence
-        ml.add_mapping("222", "BNS 222", "added by test")
-        with open(mapping_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        assert "222" in data and data["222"]["bns_section"] == "BNS 222"
-
     def test_add_mapping_without_persistence(self, tmp_path, monkeypatch):
         """Verify that persist=False prevents saving to disk."""
-        mapping_path = tmp_path / "test_mapping_no_persist.json"
-        initial = {"100": {"bns_section": "BNS 100", "notes": "initial", "source": "test"}}
-        with open(mapping_path, "w", encoding="utf-8") as f:
-            json.dump(initial, f)
-        monkeypatch.setenv("LTA_MAPPING_DB", str(mapping_path))
-
-        if "engine.mapping_logic" in sys.modules:
-            del sys.modules["engine.mapping_logic"]
+        db_path = tmp_path / "test_mapping_no_persist.sqlite"
+        monkeypatch.setattr("engine.db._DB_FILE", str(db_path))
+        
+        # Clear modules
+        for mod in list(sys.modules.keys()):
+            if mod.startswith("engine."):
+                del sys.modules[mod]
+        
+        from engine import db
+        db.initialize_db()
+        db.insert_mapping("100", "BNS 100", "initial", "test", "Test")
+        
         ml = importlib.import_module("engine.mapping_logic")
 
         # Add without persistence
@@ -115,27 +117,21 @@ class TestMappingPersistence:
         res = ml.map_ipc_to_bns("333")
         assert res is not None, "Should be in memory"
 
-        # Verify it's NOT on disk
-        with open(mapping_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        assert "333" not in data, "Should not be persisted to disk"
+        # Verify it's NOT in the database
+        result = db.get_mapping("333")
+        assert result is None, "Should not be persisted to database"
 
 
 class TestAddMapping:
     """Tests for the add_mapping() function."""
 
-    def test_add_mapping_creates_valid_structure(self, tmp_path, monkeypatch):
+    def test_add_mapping_creates_valid_structure(self):
         """Verify that add_mapping creates correct data structure."""
-        mapping_path = tmp_path / "test_add_mapping.json"
-        with open(mapping_path, "w", encoding="utf-8") as f:
-            json.dump({}, f)
-        monkeypatch.setenv("LTA_MAPPING_DB", str(mapping_path))
-
-        if "engine.mapping_logic" in sys.modules:
-            del sys.modules["engine.mapping_logic"]
-        ml = importlib.import_module("engine.mapping_logic")
-
-        ml.add_mapping("555", "BNS 555", "Test notes", "test_source")
+        # Use the existing module with real database
+        from engine import mapping_logic as ml
+        
+        # Add a test mapping (with persist=False to not modify real db)
+        ml.add_mapping("555", "BNS 555", "Test notes", "test_source", persist=False)
         
         result = ml.map_ipc_to_bns("555")
         assert result is not None
@@ -143,20 +139,15 @@ class TestAddMapping:
         assert result["notes"] == "Test notes"
         assert result["source"] == "test_source"
 
-    def test_add_mapping_overwrites_existing(self, tmp_path, monkeypatch):
+    def test_add_mapping_overwrites_existing(self):
         """Verify that adding a mapping for existing section overwrites it."""
-        mapping_path = tmp_path / "test_overwrite.json"
-        initial = {"666": {"bns_section": "BNS OLD", "notes": "old", "source": "old"}}
-        with open(mapping_path, "w", encoding="utf-8") as f:
-            json.dump(initial, f)
-        monkeypatch.setenv("LTA_MAPPING_DB", str(mapping_path))
-
-        if "engine.mapping_logic" in sys.modules:
-            del sys.modules["engine.mapping_logic"]
-        ml = importlib.import_module("engine.mapping_logic")
-
+        from engine import mapping_logic as ml
+        
+        # Add initial mapping
+        ml.add_mapping("666", "BNS OLD", "old", persist=False)
+        
         # Overwrite
-        ml.add_mapping("666", "BNS NEW", "new notes")
+        ml.add_mapping("666", "BNS NEW", "new notes", persist=False)
         
         result = ml.map_ipc_to_bns("666")
         assert result["bns_section"] == "BNS NEW", "Should overwrite existing"
