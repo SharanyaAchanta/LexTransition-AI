@@ -2,6 +2,7 @@
 import os
 import requests
 import json
+import hashlib
 from typing import Dict, Optional
 
 # Simple in-memory cache
@@ -51,7 +52,8 @@ def compare_ipc_bns(user_query: str) -> Dict[str, str]:
     }
 def _call_ollama_diff(ipc_text: str, bns_text: str) -> str:
 
-    cache_key = f"{ipc_text}::{bns_text}"
+    raw_key = f"{ipc_text}:{bns_text}"
+    cache_key = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
     # Check cache first
     if cache_key in AI_CACHE:
