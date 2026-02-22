@@ -221,3 +221,13 @@ All foundational features (Local LLM, OCR, Vector DB, and CI/CD) are fully opera
 - [ ] **Automated Legal Briefs:** Add a reporting engine to export OCR analysis and IPC-to-BNS comparisons into cleanly formatted PDF/Docx files.
 
 ---
+
+## ✨ Contributors
+
+This project exists thanks to the amazing people who contribute their time, ideas, and improvements.
+
+We truly appreciate every contribution 💙
+
+<a href="https://github.com/SharanyaAchanta/LexTransition-AI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=SharanyaAchanta/LexTransition-AI" />
+</a>
