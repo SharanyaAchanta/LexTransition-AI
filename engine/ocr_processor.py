@@ -24,10 +24,12 @@ def available_engines() -> List[str]:
     engines = []
     try:
         import easyocr
+        import easyocr
         engines.append("easyocr")
     except Exception:
         pass
     try:
+        import pytesseract
         import pytesseract
         engines.append("pytesseract")
     except Exception:
@@ -40,6 +42,9 @@ def extract_text(file_bytes: bytes) -> str:
         from PIL import Image
         # Get the cached model
         reader = load_easyocr_reader()
+        from PIL import Image
+        # Get the cached model
+        reader = load_easyocr_reader()
         image = Image.open(io.BytesIO(file_bytes))
         result = reader.readtext(image)
         return " ".join([r[1] for r in result])
@@ -49,6 +54,8 @@ def extract_text(file_bytes: bytes) -> str:
         
         # Fallback to pytesseract
         try:
+            import pytesseract
+            from PIL import Image
             import pytesseract
             from PIL import Image
             image = Image.open(io.BytesIO(file_bytes))

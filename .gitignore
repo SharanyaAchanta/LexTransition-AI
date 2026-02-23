@@ -30,5 +30,8 @@ temp_audio/
 .DS_Store
 Thumbs.db
 .vscode/
-mapping_db.sqlite
+
+
 search_history.json
+bookmarks.json
+
