@@ -17,9 +17,18 @@ logger = logging.getLogger(__name__)
 
 try:
     import pdfplumber
+    import pdfplumber
 except Exception:
     pdfplumber = None
 
+# Load the cached model
+@st.cache_resource(show_spinner=False)
+def load_embedding_model():
+    """Loads the SentenceTransformer model into memory only once."""
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+# Check environment config
 # Load the cached model
 @st.cache_resource(show_spinner=False)
 def load_embedding_model():
@@ -32,10 +41,14 @@ _USE_EMB = os.environ.get("LTA_USE_EMBEDDINGS") == "1"
 _EMB_AVAILABLE = False
 
 # Validate dependencies availability
+_EMB_AVAILABLE = False
+
+# Validate dependencies availability
 try:
     if _USE_EMB:
         from sentence_transformers import SentenceTransformer  # type: ignore
         _EMB_AVAILABLE = True
+
 
 except Exception:
     _EMB_AVAILABLE = False
@@ -47,6 +60,7 @@ try:
 except Exception:
     _EMB_ENGINE_AVAILABLE = False
 
+_INDEX = []        # page-level index
 _INDEX = []        # page-level index
 _INDEX_LOADED = False
 _EMB_INDEX = []    # cached embeddings for current docs
@@ -188,6 +202,9 @@ def _emb_search(query: str, top_k: int = 3):
         # --- USE CACHED MODEL HERE ---
         model = load_embedding_model()
         
+        # --- USE CACHED MODEL HERE ---
+        model = load_embedding_model()
+        
         qvec = model.encode([query], convert_to_numpy=True)[0]
         scores = []
         for d in _EMB_INDEX:
@@ -196,6 +213,7 @@ def _emb_search(query: str, top_k: int = 3):
             sim = float(np.dot(qvec, vec) / (np.linalg.norm(qvec) * np.linalg.norm(vec) + 1e-9))
             scores.append((sim, d["file"], d["page"], d["text"]))
         scores.sort(key=lambda x: x[0], reverse=True)
+        
         
         results = scores[:top_k]
         md = ["> **Answer (embedding search, grounded):**\n"]
@@ -218,6 +236,7 @@ def search_pdfs(query: str, top_k: int = 3):
         return None
 
     # (Keep your existing external engine logic here)
+    # (Keep your existing external engine logic here)
     if os.environ.get("LTA_USE_EMBEDDINGS") == "1" and _EMB_ENGINE_AVAILABLE:
         try:
             emb_res = _emb_search_index(query, top_k=top_k)
@@ -233,7 +252,9 @@ def search_pdfs(query: str, top_k: int = 3):
             return emb_res
 
     # (Keep your token-count fallback here)
+    # (Keep your token-count fallback here)
     if not _INDEX_LOADED:
+        index_pdfs()
         index_pdfs()
     if not _INDEX:
         return None

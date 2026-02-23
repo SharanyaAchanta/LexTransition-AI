@@ -55,21 +55,23 @@ def compare_ipc_bns(user_query: str) -> Dict[str, str]:
     }
 def _call_ollama_diff(ipc_text: str, bns_text: str) -> str:
 
+    current_time = time.time()
+
     raw_key = f"{ipc_text}:{bns_text}"
     cache_key = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
     # Check cache first
     if cache_key in AI_CACHE:
         cached_entry = AI_CACHE[cache_key]
-        current_time = time.time()
 
-    if current_time < cached_entry["expiry"]:
-        print(f"[CACHE HIT] {cache_key[:40]}...")
-        return cached_entry["value"]
-    else:
-        print(f"[CACHE EXPIRED] {cache_key[:40]}...")
-        del AI_CACHE[cache_key]
+        if current_time < cached_entry["expiry"]:
+            print(f"[CACHE HIT] {cache_key[:40]}...")
+            return cached_entry["value"]
+        else:
+            print(f"[CACHE EXPIRED] {cache_key[:40]}...")
+            del AI_CACHE[cache_key]
 
+    # If it wasn't in the cache, or it expired, it drops down here to call Ollama!
     if not OLLAMA_URL:
         return "ERROR: AI Offline. Please check your Ollama connection."
 
