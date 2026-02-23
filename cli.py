@@ -4,6 +4,8 @@ import argparse
 import json
 import sys
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 from engine.mapping_logic import map_ipc_to_bns
 from engine.db import (
