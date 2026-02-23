@@ -5,6 +5,7 @@ import html as html_lib
 import re
 import time
 import base64
+
 # Import TTS engine 
 from engine.tts_handler import tts_engine
 from engine.github_stats import get_github_stats, get_github_contributors
@@ -12,6 +13,10 @@ from engine.risk_analyzer import analyze_risk
 from engine.bail_analyzer import analyze_bail
 from engine.summarizer import generate_summary
 from engine.deadline_extractor import analyze_deadlines
+
+# Import STT engine
+from engine.stt_handler import get_stt_engine
+from streamlit_mic_recorder import mic_recorder
 
 # ===== READ THEME FROM URL =====
 query_theme = st.query_params.get("theme")
@@ -41,12 +46,154 @@ if os.path.exists(TEMP_AUDIO_DIR):
         except Exception:
             pass # File might be playing 
 
+# Page Configuration
+st.set_page_config(page_title="LexTransition AI", page_icon="⚖️", layout="wide")
+
+# Access the CSS file
+def load_css(file_path):
+    if os.path.exists(file_path):
+        with open(file_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# Load the CSS file
+load_css("assets/styles.css")
+
+# Initialize session state for navigation
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Home"
+
+# Security helpers (avoid path traversal / HTML injection in UI-rendered HTML)
+_SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
+
+def _safe_filename(name: str, default: str) -> str:
+    base = os.path.basename(name or "").strip().replace("\x00", "")
+    if not base:
+        return default
+    safe = _SAFE_FILENAME_RE.sub("_", base).strip("._")
+    return safe or default
+
+def _dedupe_path(path: str) -> str:
+    if not os.path.exists(path):
+        return path
+    stem, ext = os.path.splitext(path)
+    i = 1
+    while True:
+        candidate = f"{stem}_{i}{ext}"
+        if not os.path.exists(candidate):
+            return candidate
+        i += 1
+
+# reading the page url
+def _read_url_page():
+    try:
+        qp = st.query_params
+        try:
+            val = qp.get("page", None)
+        except Exception:
+            try:
+                val = dict(qp).get("page", None)
+            except Exception:
+                val = None
+        if isinstance(val, list):
+            return val[0]
+        return val
+    except Exception:
+        qp = st.experimental_get_query_params()
+        return qp.get("page", [None])[0] if qp else None
+
+url_page = _read_url_page()
+
 # load css
 def load_css(file_path):
     if os.path.exists(file_path):
         with open(file_path) as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+# If a sidebar navigation is pending, take precedence over URL param once
+if "pending_page" in st.session_state:
+    st.session_state.current_page = st.session_state.pop("pending_page")
+else:
+    if url_page in {"Home", "Mapper", "OCR", "Fact", "Settings"}:
+        st.session_state.current_page = url_page
+
+# Helper: navigate via sidebar and keep URL in sync
+def _goto(page: str):
+    # Defer assignment to top-of-run logic so it overrides URL param this cycle
+    st.session_state.pending_page = page
+    try:
+        st.experimental_set_query_params(page=page)
+    except Exception:
+        pass
+    st.rerun()
+
+# Header Navigation
+nav_items = [
+    ("Home", "Home"),
+    ("Mapper", "IPC -> BNS Mapper"),
+    ("OCR", "Document OCR"),
+    ("Fact", "Fact Checker"),
+    ("Settings", "Settings / About"),
+]
+
+header_links = []
+for page, label in nav_items:
+    page_html = html_lib.escape(page)
+    label_html = html_lib.escape(label)
+    active_class = "active" if st.session_state.current_page == page else ""
+    header_links.append(
+        f'<a class="top-nav-link {active_class}" href="?page={page_html}" target="_self" '
+        f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
+    )
+
+st.markdown(
+    f"""
+<!-- Compact fixed site logo -->
+<a class="site-logo" href="?page=Home" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
+
+<div class="top-header">
+  <div class="top-header-inner">
+    <div class="top-header-left">
+      <!-- header brand is hidden by CSS; left here for semantics/accessibility -->
+      <a class="top-brand" href="?page=Home" target="_self">LexTransition AI</a>
+    </div>
+    <div class="top-header-center">
+      <div class="top-nav">{''.join(header_links)}</div>
+    </div>
+    <div class="top-header-right">
+      <a class="top-cta" href="?page=Fact" target="_self">Get Started</a>
+    </div>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+# Attempt to import engines (use stubs if missing)
+try:
+    from engine.ocr_processor import extract_text, available_engines
+    from engine.mapping_logic import map_ipc_to_bns, add_mapping
+    from engine.rag_engine import search_pdfs, add_pdf, index_pdfs
+    from engine.llm import summarize as llm_summarize
+    ENGINES_AVAILABLE = True
+except Exception:
+    ENGINES_AVAILABLE = False
+
+# LLM summarize stub
+try:
+    from engine.llm import summarize as llm_summarize
+except Exception:
+    def llm_summarize(text, question=None):
+        return None
+
+# Index PDFs at startup if engine available
+if ENGINES_AVAILABLE and not st.session_state.get("pdf_indexed"):
+    try:
+        index_pdfs("law_pdfs")
+        st.session_state.pdf_indexed = True
+    except Exception:
+        pass
+
+# Get current page
 # Load external CSS file
 load_css("assets/styles.css")
 
@@ -409,14 +556,65 @@ try:
         st.markdown("Convert old IPC sections into new BNS equivalents with legal-grade accuracy.")
         st.divider()
         
-        # Input Section
+        # Input Section Wrapper
         st.markdown('<div class="mapper-wrap">', unsafe_allow_html=True)
-        col1, col2 = st.columns([4, 1])
+        
+        # --- 3-column layout: Input | Mic | Search ---
+        col1, col2, col3 = st.columns([3, 1, 1])
+        
         with col1:
-            search_query = st.text_input("Enter IPC Section", placeholder="e.g., 420, 302, 378")
+            # We bind the value to our session state so Voice Input auto-fills this box
+            search_query = st.text_input(
+                "Search", # A label is required, but we hide it below
+                value=st.session_state.get('mapper_search_val', ''),
+                placeholder="e.g., 420, 302, 378",
+                label_visibility="collapsed" # Aligns perfectly with the buttons
+            )
+            
         with col2:
-            st.write("#") # Spacer
+            # --- STT Integration Widget ---
+            audio_dict = mic_recorder(
+                start_prompt="🎙️ Speak",
+                stop_prompt="🛑 Stop",
+                key='mapper_mic',
+                use_container_width=True
+            )
+
+        with col3:
             search_btn = st.button("🔍 Find BNS Eq.", use_container_width=True)
+
+        # --- Process Audio ---
+        audio_val = audio_dict['bytes'] if audio_dict else None
+        
+        # Process the audio only once
+        if audio_val and audio_val != st.session_state.get("last_audio_mapper"):
+            st.session_state["last_audio_mapper"] = audio_val 
+            
+            temp_path = "temp_audio/mapper_audio.wav"
+            os.makedirs("temp_audio", exist_ok=True)
+            with open(temp_path, "wb") as f:
+                f.write(audio_val)
+                
+            with st.spinner("🎙️ Agent is listening..."):
+                stt_engine = get_stt_engine() 
+                text = stt_engine.transcribe_audio(temp_path)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                    
+                # Whisper will transcribe "Section four twenty" as "Section 420".
+                # We use regex to extract just the alphanumeric section (e.g., "420", "498A")
+                nums = re.findall(r'\d+[a-zA-Z]?', text) 
+                voice_query = nums[0].upper() if nums else text.strip()
+                    
+                # Update state and trigger an automatic search
+                st.session_state['mapper_search_val'] = voice_query
+                st.session_state['auto_search'] = True 
+                st.rerun()
+
+        # --- Auto-Search from Voice ---
+        if st.session_state.get('auto_search'):
+            search_btn = True # Spoof the button click
+            st.session_state['auto_search'] = False # Instantly reset the flag
 
         # --- STEP 1: Handle Search Logic & State ---
         if search_query and search_btn:
@@ -436,7 +634,7 @@ try:
                 st.error("❌ Engines are offline. Cannot perform database lookup.")
 
         st.divider()
-
+        
         # --- STEP 2: Render Persistent Results ---
         # We check session_state instead of search_btn so results survive refreshes
         if st.session_state.get('last_result'):
@@ -771,17 +969,88 @@ Failure to comply may result in legal action.
                             audio_path = tts_engine.generate_audio(term['definition'], f"temp_term_{term['term']}.wav")
                             if audio_path and os.path.exists(audio_path):
                                 render_agent_audio(audio_path, title=f"Term: {term['term']}")
+
+    # ============================================================================
+    # PAGE: FACT CHECKER
+    # ============================================================================
     elif current_page == "Fact":
+        def clean_text_for_tts(text: str) -> str:
+            """Removes markdown formatting so the TTS sounds natural."""
+            import re
+            text = re.sub(r'[*_]{1,3}', '', text)
+            text = re.sub(r'>\s?', '', text)
+            text = text.replace('\n', ' ')
+            return text.strip()
+        
         st.markdown("## 📚 Grounded Fact Checker")
         st.markdown("Ask a legal question to verify answers with citations from official PDFs.")
         st.divider()
         
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            user_question = st.text_input("Question", placeholder="e.g., penalty for cheating?")
-        with col2:
-            verify_btn = st.button("📖 Verify", use_container_width=True)
+        # Input Section Wrapper
+        st.markdown('<div class="mapper-wrap">', unsafe_allow_html=True)
         
+        # --- 3-column layout: Input | Mic | Search ---
+        col1, col2, col3 = st.columns([3, 1, 1])
+        
+        with col1:
+            # Bind the value to our session state so Voice Input auto-fills this box
+            user_question = st.text_input(
+                "Question", 
+                value=st.session_state.get('fact_search_val', ''),
+                placeholder="e.g., penalty for cheating?",
+                label_visibility="collapsed"
+            )
+            
+        with col2:
+            # --- STT Integration Widget (Input) ---
+            audio_dict = mic_recorder(
+                start_prompt="🎙️ Speak",
+                stop_prompt="🛑 Stop",
+                key='fact_mic',
+                use_container_width=True
+            )
+
+        with col3:
+            verify_btn = st.button("📖 Verify", use_container_width=True)
+
+        # --- Process Audio Input ---
+        audio_val = audio_dict['bytes'] if audio_dict else None
+        
+        # Process the audio only once
+        if audio_val and audio_val != st.session_state.get("last_audio_fact"):
+            st.session_state["last_audio_fact"] = audio_val 
+            
+            temp_path = "temp_audio/fact_audio.wav"
+            os.makedirs("temp_audio", exist_ok=True)
+            with open(temp_path, "wb") as f:
+                f.write(audio_val)
+                
+            with st.spinner("🎙️ Agent is listening..."):
+                stt_engine = get_stt_engine() 
+                text = stt_engine.transcribe_audio(temp_path)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                    
+                # Standardize spoken numbers to digits so the search engine handles them better
+                word_to_num = {
+                    r'\bone\b': '1', r'\btwo\b': '2', r'\bthree\b': '3', 
+                    r'\bfour\b': '4', r'\bfive\b': '5', r'\bsix\b': '6', 
+                    r'\bseven\b': '7', r'\beight\b': '8', r'\bnine\b': '9', r'\bten\b': '10'
+                }
+                voice_query = text.strip()
+                for word, num in word_to_num.items():
+                    voice_query = re.sub(word, num, voice_query, flags=re.IGNORECASE)
+                    
+                st.session_state['fact_search_val'] = voice_query
+                st.session_state['fact_auto_search'] = True 
+                st.rerun()
+
+        # --- Auto-Search Trigger ---
+        if st.session_state.get('fact_auto_search'):
+            verify_btn = True
+            st.session_state['fact_auto_search'] = False
+
+        # --- Upload PDF Section ---
         with st.expander("Upload Law PDFs"):
             uploaded_pdf = st.file_uploader("Upload PDF", type=["pdf"])
             if uploaded_pdf and ENGINES_AVAILABLE:
@@ -792,22 +1061,28 @@ Failure to comply may result in legal action.
                 add_pdf(path)
                 st.success(f"Added {uploaded_pdf.name}")
 
+        # --- Search & TTS Output Logic ---
         if user_question and verify_btn:
             if ENGINES_AVAILABLE:
-                res = search_pdfs(user_question)
-                if res:
-                    st.markdown(res)
+                with st.spinner("Searching documents..."):
+                    res = search_pdfs(user_question.strip())
                     
-                    # --- TTS INTEGRATION START (Fact Checker) ---
-                    with st.spinner("🎙️ Agent is preparing the verbal citation..."):
-                        # Pass the 'res' string directly to the audio engine
-                        audio_path = tts_engine.generate_audio(res, "temp_fact_check.wav")
-                        if audio_path and os.path.exists(audio_path):
-                            render_agent_audio(audio_path, title="Legal Fact Dictation")
-                    # --- TTS INTEGRATION END ---
-                    
-                else:
-                    st.info("No citations found.")
+                    if res:
+                        # Display the visual text result
+                        st.markdown(res)
+                        
+                        # --- TTS INTEGRATION START (Output) ---
+                        with st.spinner("🎙️ Agent is preparing the verbal citation..."):
+                            # Clean the markdown so the TTS agent reads it smoothly
+                            clean_res = clean_text_for_tts(res) 
+                            audio_path = tts_engine.generate_audio(clean_res, "temp_fact_check.wav")
+                            
+                            if audio_path and os.path.exists(audio_path):
+                                render_agent_audio(audio_path, title="Legal Fact Dictation")
+                        # --- TTS INTEGRATION END ---
+                        
+                    else:
+                        st.info("No citations found.")
             else:
                 st.error("RAG Engine offline.")
 
@@ -1070,3 +1345,17 @@ Failure to comply may result in legal action.
 except Exception as e:
     st.error("🚨 An unexpected error occurred.")
     st.exception(e)
+
+# Footer Bar
+st.markdown(
+    """
+<div class="app-footer">
+  <div class="app-footer-inner">
+    <span class="top-chip">Offline Mode</span>
+    <span class="top-chip">Privacy First</span>
+    <a class="top-credit" href="https://www.flaticon.com/" target="_blank">Icons: Flaticon</a>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)

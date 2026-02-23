@@ -7,7 +7,10 @@ from typing import Dict, Optional
 
 # Simple in-memory cache
 from typing import Dict
-AI_CACHE: Dict[str, str] = {}
+import time
+
+AI_CACHE: Dict[str, Dict] = {}
+CACHE_TTL_SECONDS = 300  # 5 minutes (configurable later)
 
 # import db, mapping_logic engines
 from engine import db, mapping_logic
@@ -52,14 +55,23 @@ def compare_ipc_bns(user_query: str) -> Dict[str, str]:
     }
 def _call_ollama_diff(ipc_text: str, bns_text: str) -> str:
 
+    current_time = time.time()
+
     raw_key = f"{ipc_text}:{bns_text}"
     cache_key = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
     # Check cache first
     if cache_key in AI_CACHE:
-        print(f"[CACHE HIT] {cache_key[:40]}...")
-        return AI_CACHE[cache_key]
+        cached_entry = AI_CACHE[cache_key]
 
+        if current_time < cached_entry["expiry"]:
+            print(f"[CACHE HIT] {cache_key[:40]}...")
+            return cached_entry["value"]
+        else:
+            print(f"[CACHE EXPIRED] {cache_key[:40]}...")
+            del AI_CACHE[cache_key]
+
+    # If it wasn't in the cache, or it expired, it drops down here to call Ollama!
     if not OLLAMA_URL:
         return "ERROR: AI Offline. Please check your Ollama connection."
 
@@ -97,7 +109,12 @@ def _call_ollama_diff(ipc_text: str, bns_text: str) -> str:
         if resp.status_code == 200:
            analysis = resp.json().get("response", "No response generated.")
            print(f"[CACHE STORE] {cache_key[:40]}...")
-           AI_CACHE[cache_key] = analysis
+
+           AI_CACHE[cache_key] = {
+                "value": analysis,
+                "expiry": time.time() + CACHE_TTL_SECONDS
+            }
+
            return analysis
         
         else:
