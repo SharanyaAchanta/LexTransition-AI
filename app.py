@@ -250,19 +250,12 @@ def render_agent_audio(audio_path, title="🎙️ AI Agent Dictation"):
 def _read_url_page():
     try:
         qp = st.query_params
-        try:
-            val = qp.get("page", None)
-        except Exception:
-            try:
-                val = dict(qp).get("page", None)
-            except Exception:
-                val = None
+        val = qp.get("page", None)
         if isinstance(val, list):
             return val[0]
         return val
     except Exception:
-        qp = st.experimental_get_query_params()
-        return qp.get("page", [None])[0] if qp else None
+        return None
 
 
 url_page = _read_url_page()
