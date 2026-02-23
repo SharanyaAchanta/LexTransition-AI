@@ -12,6 +12,8 @@ import json
 import hashlib
 import streamlit as st
 import numpy as np
+import logging
+logger = logging.getLogger(__name__)
 
 try:
     import pdfplumber
@@ -164,7 +166,7 @@ def index_pdfs(dir_path="law_pdfs"):
             for d, v in zip(_INDEX, vecs):
                 _EMB_INDEX.append({"file": d["file"], "page": d["page"], "text": d["text"], "vec": v})
         except Exception as e:
-            print(f"Embedding generation failed: {e}")
+            logger.error(f"Embedding generation failed: {e}")
 
     return True
 
@@ -222,7 +224,7 @@ def search_pdfs(query: str, top_k: int = 3):
             if emb_res:
                 return emb_res
         except Exception as e:
-            print(f"External Embeddings Engine Failed: {e}")
+            logger.error(f"External Embeddings Engine Failed: {e}")
 
     # Internal embeddings fallback
     if _USE_EMB and _EMB_AVAILABLE:

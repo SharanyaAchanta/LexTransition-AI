@@ -17,6 +17,8 @@ The mapping database includes 65+ verified mappings organized by offense categor
 Sources: Ministry of Home Affairs, Official Gazette of India
 """
 import os
+import logging
+logger = logging.getLogger(__name__)
 import json
 from difflib import get_close_matches
 from typing import Optional, List, Dict
@@ -66,7 +68,7 @@ def _load_mappings():
         
         if not _mappings:
             # If DB is empty, use defaults and save to DB
-            print("📦 DB is empty. Initializing with default mappings...")
+            logger.info("📦 DB is empty. Initializing with default mappings...")
             _mappings = _default_mappings.copy()
             for ipc_section, mapping in _mappings.items():
                 db.insert_mapping(
@@ -79,7 +81,7 @@ def _load_mappings():
                     mapping["category"]
                 )
     except Exception as e:
-        print(f"failed to load DB: {e}")
+        logger.error(f"Failed to load DB: {e}", exc_info=True)
         _mappings = _default_mappings.copy()
 
 _load_mappings()

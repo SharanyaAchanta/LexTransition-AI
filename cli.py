@@ -4,6 +4,8 @@ import argparse
 import json
 import sys
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 from engine.mapping_logic import map_ipc_to_bns
 from engine.db import (
@@ -15,7 +17,7 @@ from engine.db import (
 def _cmd_map(args: argparse.Namespace) -> int:
     result = map_ipc_to_bns(args.ipc_section)
     if not result:
-        print("No mapping found")
+        logger.info("No mapping found")
         return 1
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

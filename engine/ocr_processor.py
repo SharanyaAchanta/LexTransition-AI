@@ -6,6 +6,8 @@ Functions:
 - available_engines() -> list of strings
 """
 import io
+import logging
+logger = logging.getLogger(__name__)
 import streamlit as st
 from typing import Any, Dict, List
 
@@ -13,7 +15,7 @@ from typing import Any, Dict, List
 @st.cache_resource(show_spinner=False)
 def load_easyocr_reader() -> Any:
     """Loads the heavy OCR model into memory only once."""
-    print("Loading OCR Model into Memory...")
+    logger.info("Loading OCR Model into Memory...")
     import easyocr
     # gpu=False ensures it runs safely on CPU-only machines/containers
     return easyocr.Reader(["en"], gpu=False) 
@@ -43,7 +45,7 @@ def extract_text(file_bytes: bytes) -> str:
         return " ".join([r[1] for r in result])
     except Exception as e:
         # 👇 ADD THIS PRINT STATEMENT
-        print(f"EasyOCR Failed: {e}") 
+        logger.error(f"EasyOCR Failed: {e}") 
         
         # Fallback to pytesseract
         try:
@@ -52,7 +54,7 @@ def extract_text(file_bytes: bytes) -> str:
             image = Image.open(io.BytesIO(file_bytes))
             return pytesseract.image_to_string(image)
         except Exception as e2:
-            print(f"Pytesseract Failed: {e2}")
+            logger.error(f"Pytesseract Failed: {e2}")
             return "NOTICE UNDER SECTION 41A CrPC... (OCR not configured). Install easyocr/pytesseract & tesseract binary for production."
 
 def extract_text_batch(file_list: List[Any]) -> Dict[str, Dict[str, Any]]:
