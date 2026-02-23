@@ -31,3 +31,4 @@ temp_audio/
 Thumbs.db
 .vscode/
 mapping_db.sqlite
+bookmarks.json
