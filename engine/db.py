@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
+from engine import db_utils
+
 _base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _DB_FILE = os.path.join(_base_dir, "mapping_db.sqlite")
 _JSON_FILE = os.path.join(_base_dir, "mapping_db.json")
