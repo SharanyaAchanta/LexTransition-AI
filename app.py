@@ -33,6 +33,22 @@ if "theme" not in st.session_state:
     else:
         st.session_state.theme = "dark"
 
+def highlight_query_terms(text, query):
+    if not text or not query:
+        return text
+
+    terms = query.split()
+    highlighted_text = text
+
+    for term in terms:
+        pattern = re.compile(re.escape(term), re.IGNORECASE)
+        highlighted_text = pattern.sub(
+            lambda m: f"<mark style='background-color:yellow;'>{m.group(0)}</mark>",
+            highlighted_text
+        )
+
+    return highlighted_text
+
 # Page Configuration
 st.set_page_config(
     page_title="LexTransition AI",
