@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
+from engine import db_utils
+
 _base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _DB_FILE = os.path.join(_base_dir, "mapping_db.sqlite")
 _JSON_FILE = os.path.join(_base_dir, "mapping_db.json")
@@ -181,135 +183,45 @@ def insert_mapping(ipc_section: str, bns_section: str,
 
 def get_mapping(ipc_section: str) -> Optional[Dict]:
     """Get a single mapping by IPC section."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT * FROM mappings WHERE ipc_section = ?", (ipc_section,))
-        row = cursor.fetchone()
-        conn.close()
-
-        if row:
-            return {
-                'ipc_section': row[0],
-                'bns_section': row[1],
-                'ipc_full_text': row[2],
-                'bns_full_text': row[3],
-                'notes': row[4],
-                'source': row[5],
-                'category': row[6]
-            }
-        return None
-
-    except Exception as e:
-        print(f"Error getting mapping: {e}")
-        return None
+    row = db_utils.DatabaseHelper.fetch_one(
+        "SELECT * FROM mappings WHERE ipc_section = ?",
+        (ipc_section,)
+    )
+    return db_utils.map_row_to_full_mapping(row)
 
 def get_all_mappings() -> Dict[str, Dict]:
     """Get all mappings as a dictionary."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT * FROM mappings")
-        rows = cursor.fetchall()
-        conn.close()
-
-        mappings = {}
-        for row in rows:
-            mappings[row[0]] = {
-                'bns_section': row[1],
-                'ipc_full_text': row[2],
-                'bns_full_text': row[3],
-                'notes': row[4],
-                'source': row[5],
-                'category': row[6]
-            }
-        return mappings
-
-    except Exception as e:
-        print(f"Error getting all mappings: {e}")
-        return {}
+    rows = db_utils.DatabaseHelper.fetch_all("SELECT * FROM mappings")
+    return db_utils.map_rows_to_mappings(rows, include_ipc_key=True)
 
 def get_mappings_by_category(category: str) -> Dict[str, Dict]:
     """Get mappings by category."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT * FROM mappings WHERE category = ?", (category,))
-        rows = cursor.fetchall()
-        conn.close()
-
-        mappings = {}
-        for row in rows:
-            mappings[row[0]] = {
-                'bns_section': row[1],
-                'ipc_full_text': row[2],
-                'bns_full_text': row[3],
-                'notes': row[4],
-                'source': row[5],
-                'category': row[6]
-            }
-        return mappings
-
-    except Exception as e:
-        print(f"Error getting mappings by category: {e}")
-        return {}
+    rows = db_utils.DatabaseHelper.fetch_all(
+        "SELECT * FROM mappings WHERE category = ?",
+        (category,)
+    )
+    return db_utils.map_rows_to_mappings(rows, include_ipc_key=True)
 
 def get_categories() -> List[str]:
     """Get all unique categories."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT DISTINCT category FROM mappings")
-        rows = cursor.fetchall()
-        conn.close()
-
-        return [row[0] for row in rows if row[0]]
-
-    except Exception as e:
-        print(f"Error getting categories: {e}")
-        return []
+    rows = db_utils.DatabaseHelper.fetch_all("SELECT DISTINCT category FROM mappings")
+    return [row[0] for row in rows if row[0]]
 
 def get_mapping_count() -> int:
     """Get total number of mappings."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT COUNT(*) FROM mappings")
-        count = cursor.fetchone()[0]
-        conn.close()
-
-        return count
-
-    except Exception as e:
-        print(f"Error getting mapping count: {e}")
-        return 0
+    row = db_utils.DatabaseHelper.fetch_one("SELECT COUNT(*) FROM mappings")
+    return row[0] if row else 0
 
 def get_metadata() -> Dict:
     """Get metadata from database."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT key, value FROM metadata")
-        rows = cursor.fetchall()
-        conn.close()
-
-        metadata = {}
-        for key, value in rows:
-            try:
-                metadata[key] = json.loads(value)
-            except:
-                metadata[key] = value
-        return metadata
-
-    except Exception as e:
-        print(f"Error getting metadata: {e}")
-        return {}
+    rows = db_utils.DatabaseHelper.fetch_all("SELECT key, value FROM metadata")
+    metadata = {}
+    for key, value in rows:
+        try:
+            metadata[key] = json.loads(value)
+        except:
+            metadata[key] = value
+    return metadata
 
 def update_mapping(
     ipc_section: str,
@@ -402,49 +314,32 @@ def upsert_mapping(
 
 def get_mapping_audit(ipc_section: Optional[str] = None, limit: int = 100) -> List[Dict]:
     """Get audit trail entries, newest first."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        if ipc_section:
-            cursor.execute(
-                """
-                SELECT id, action, ipc_section, previous_value, new_value, actor, created_at
-                FROM mapping_audit
-                WHERE ipc_section = ?
-                ORDER BY id DESC
-                LIMIT ?
-                """,
-                (ipc_section, limit),
-            )
-        else:
-            cursor.execute(
-                """
-                SELECT id, action, ipc_section, previous_value, new_value, actor, created_at
-                FROM mapping_audit
-                ORDER BY id DESC
-                LIMIT ?
-                """,
-                (limit,),
-            )
-        rows = cursor.fetchall()
-        conn.close()
-        entries = []
-        for row in rows:
-            entries.append(
-                {
-                    "id": row[0],
-                    "action": row[1],
-                    "ipc_section": row[2],
-                    "previous_value": json.loads(row[3] or "{}"),
-                    "new_value": json.loads(row[4] or "{}"),
-                    "actor": row[5],
-                    "created_at": row[6],
-                }
-            )
-        return entries
-    except Exception as e:
-        print(f"Error getting mapping audit: {e}")
-        return []
+    if ipc_section:
+        rows = db_utils.DatabaseHelper.fetch_all(
+            """
+            SELECT id, action, ipc_section, previous_value, new_value, actor, created_at
+            FROM mapping_audit
+            WHERE ipc_section = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (ipc_section, limit),
+        )
+    else:
+        rows = db_utils.DatabaseHelper.fetch_all(
+            """
+            SELECT id, action, ipc_section, previous_value, new_value, actor, created_at
+            FROM mapping_audit
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+    
+    entries = []
+    for row in rows:
+        entries.append(db_utils.map_row_to_audit_entry(row))
+    return entries
 
 def backup_database(backup_path: Optional[str] = None) -> Optional[str]:
     """Create a timestamped SQLite backup and return path."""
