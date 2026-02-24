@@ -4,6 +4,22 @@ import html as html_lib
 import re
 import time
 
+def highlight_query_terms(text, query):
+    if not text or not query:
+        return text
+
+    terms = query.split()
+    highlighted_text = text
+
+    for term in terms:
+        pattern = re.compile(re.escape(term), re.IGNORECASE)
+        highlighted_text = pattern.sub(
+            lambda m: f"<mark style='background-color:yellow;'>{m.group(0)}</mark>",
+            highlighted_text
+        )
+
+    return highlighted_text
+
 # Page Configuration
 st.set_page_config(
     page_title="LexTransition AI",
@@ -404,8 +420,22 @@ elif current_page == "Fact":
     if user_question and verify_btn:
         if ENGINES_AVAILABLE:
             res = search_pdfs(user_question)
-            if res:
-                st.markdown(res)
+
+            if res and res.get("results"):
+                for i, item in enumerate(res["results"], 1):
+                    file = item["file"]
+                    page = item["page"]
+                    text = item["text"]
+                    highlighted_text = highlight_query_terms(text, user_question)
+                    confidence = item.get("confidence_percent", 0)
+
+                    st.markdown(f"### 📄 Result {i}")
+                    st.markdown(f"**Source:** `{file}` • Page `{page}`")
+                    st.markdown(f"**Confidence:** {confidence}%")
+
+                    st.markdown("---")
+                    st.markdown(highlighted_text, unsafe_allow_html=True)
+                    st.markdown("---")
             else:
                 st.info("No citations found.")
         else:
