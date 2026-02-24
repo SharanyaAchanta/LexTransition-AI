@@ -13,6 +13,7 @@ from engine.risk_analyzer import analyze_risk
 from engine.bail_analyzer import analyze_bail
 from engine.summarizer import generate_summary
 from engine.deadline_extractor import analyze_deadlines
+from engine.bookmark_manager import add_bookmark
 
 # Import STT engine
 from engine.stt_handler import get_stt_engine
@@ -46,8 +47,7 @@ if os.path.exists(TEMP_AUDIO_DIR):
         except Exception:
             pass # File might be playing 
 
-# Page Configuration
-st.set_page_config(page_title="LexTransition AI", page_icon="⚖️", layout="wide")
+
 
 # Access the CSS file
 def load_css(file_path):
@@ -126,47 +126,47 @@ def _goto(page: str):
         pass
     st.rerun()
 
-# Header Navigation
-nav_items = [
-    ("Home", "Home"),
-    ("Mapper", "IPC -> BNS Mapper"),
-    ("OCR", "Document OCR"),
-    ("Fact", "Fact Checker"),
-    ("Settings", "Settings / About"),
-]
+# # Header Navigation
+# nav_items = [
+#     ("Home", "Home"),
+#     ("Mapper", "IPC -> BNS Mapper"),
+#     ("OCR", "Document OCR"),
+#     ("Fact", "Fact Checker"),
+#     ("Settings", "Settings / About"),
+# ]
 
-header_links = []
-for page, label in nav_items:
-    page_html = html_lib.escape(page)
-    label_html = html_lib.escape(label)
-    active_class = "active" if st.session_state.current_page == page else ""
-    header_links.append(
-        f'<a class="top-nav-link {active_class}" href="?page={page_html}" target="_self" '
-        f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
-    )
+# header_links = []
+# for page, label in nav_items:
+#     page_html = html_lib.escape(page)
+#     label_html = html_lib.escape(label)
+#     active_class = "active" if st.session_state.current_page == page else ""
+#     header_links.append(
+#         f'<a class="top-nav-link {active_class}" href="?page={page_html}" target="_self" '
+#         f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
+#     )
 
-st.markdown(
-    f"""
-<!-- Compact fixed site logo -->
-<a class="site-logo" href="?page=Home" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
+# st.markdown(
+#     f"""
+# <!-- Compact fixed site logo -->
+# <a class="site-logo" href="?page=Home" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
 
-<div class="top-header">
-  <div class="top-header-inner">
-    <div class="top-header-left">
-      <!-- header brand is hidden by CSS; left here for semantics/accessibility -->
-      <a class="top-brand" href="?page=Home" target="_self">LexTransition AI</a>
-    </div>
-    <div class="top-header-center">
-      <div class="top-nav">{''.join(header_links)}</div>
-    </div>
-    <div class="top-header-right">
-      <a class="top-cta" href="?page=Fact" target="_self">Get Started</a>
-    </div>
-  </div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+# <div class="top-header">
+#   <div class="top-header-inner">
+#     <div class="top-header-left">
+#       <!-- header brand is hidden by CSS; left here for semantics/accessibility -->
+#       <a class="top-brand" href="?page=Home" target="_self">LexTransition AI</a>
+#     </div>
+#     <div class="top-header-center">
+#       <div class="top-nav">{''.join(header_links)}</div>
+#     </div>
+#     <div class="top-header-right">
+#       <a class="top-cta" href="?page=Fact" target="_self">Get Started</a>
+#     </div>
+#   </div>
+# </div>
+# """,
+#     unsafe_allow_html=True,
+# )
 
 # Attempt to import engines (use stubs if missing)
 try:
@@ -655,11 +655,17 @@ try:
                 <div style="font-size:12px;opacity:0.8;margin-top:10px;">Source: {html_lib.escape(source)}</div>
             </div>
             """, unsafe_allow_html=True)
+
+            st.text_input(
+    "Optional Notes",
+    key="bookmark_notes_input",
+    placeholder="Add your personal notes here..."
+)
             
             st.write("###")
 
             # --- STEP 3: Action Buttons ---
-            col_a, col_b, col_c = st.columns(3)
+            col_a, col_b, col_c, col_d = st.columns(4)
             
             with col_a:
                 if st.button("🤖 Analyze Differences (AI)", use_container_width=True):
@@ -689,6 +695,19 @@ try:
 
                     else:
                         st.error("❌ LLM Engine failed to generate summary.")
+            with col_d:
+                if st.button("🔖 Save to Bookmarks", use_container_width=True):
+                    try:
+                        section = f"IPC {ipc} → {bns}"
+                        title = notes if notes else f"IPC {ipc}"
+                        user_notes = st.session_state.get("bookmark_notes_input", "")
+
+                        add_bookmark(section, title, user_notes)
+
+                        st.success("✅ Saved to bookmarks successfully!")
+
+                    except Exception as e:
+                        st.error(f"❌ Failed to save bookmark: {e}")           
 
             # --- STEP 4: Persistent Views (Rendered outside the columns) ---
             
@@ -1339,16 +1358,16 @@ except Exception as e:
     st.error("🚨 An unexpected error occurred.")
     st.exception(e)
 
-# Footer Bar
-st.markdown(
-    """
-<div class="app-footer">
-  <div class="app-footer-inner">
-    <span class="top-chip">Offline Mode</span>
-    <span class="top-chip">Privacy First</span>
-    <a class="top-credit" href="https://www.flaticon.com/" target="_blank">Icons: Flaticon</a>
-  </div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+# # Footer Bar
+# st.markdown(
+#     """
+# <div class="app-footer">
+#   <div class="app-footer-inner">
+#     <span class="top-chip">Offline Mode</span>
+#     <span class="top-chip">Privacy First</span>
+#     <a class="top-credit" href="https://www.flaticon.com/" target="_blank">Icons: Flaticon</a>
+#   </div>
+# </div>
+# """,
+#     unsafe_allow_html=True,
+# )
