@@ -1,8 +1,22 @@
 import re
 
 
-def extract_sections(text):
-    return re.findall(r"\b\d+[A-Za-z]?\b", text)
+def extract_sections(text: str):
+    """
+    Detect IPC/BNS sections only when keywords like
+    Section / Sec / U/S are present.
+    Avoid capturing dates.
+    """
+    import re
+
+    if not text:
+        return []
+
+    pattern = r"(?:section|sec|u/s)\s*(\d{1,3}[A-Za-z]?)"
+
+    matches = re.findall(pattern, text, re.IGNORECASE)
+
+    return list(set(matches))
 
 
 def detect_authority(text):

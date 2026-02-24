@@ -5,49 +5,46 @@ punishments = {
     "41A": "Notice of appearance before police officer."
 }
 
+
 def extract_sections(text: str):
     """
-    Detect IPC/BNS sections from text.
+    Detect IPC/BNS sections only when keywords like
+    Section / Sec / U/S are present.
+    Avoid capturing dates.
     """
-    pattern = r"(IPC|BNS)?\s*(Section)?\s*(\d{1,3})"
+    import re
+
+    if not text:
+        return []
+
+    pattern = r"(?:section|sec|u/s)\s*(\d{1,3}[A-Za-z]?)"
+
     matches = re.findall(pattern, text, re.IGNORECASE)
 
-    sections = []
-    for match in matches:
-        sec = match[2]
-        if sec:
-            sections.append(sec)
-
-    return list(set(sections))
-
+    return list(set(matches))
 
 def calculate_severity(sections):
     """
-    Rule-based severity scoring.
+    Improved severity classification based on section numbers.
     """
-    score = 0
+
+    highest = 0
 
     for sec in sections:
         try:
-            num = int(sec)
-
-            if num >= 300:
-                score += 3
-            elif num >= 150:
-                score += 2
-            else:
-                score += 1
-
+            num = int(re.findall(r"\d+", sec)[0])
+            highest = max(highest, num)
         except:
             continue
 
-    if score >= 6:
+    if highest >= 300:
         return "High"
-    elif score >= 3:
+    elif highest >= 150:
         return "Medium"
+    elif highest > 0:
+        return "Low"
     else:
         return "Low"
-
 
 def generate_guidance(level):
     """

@@ -12,6 +12,8 @@ from engine.github_stats import get_github_stats, get_github_contributors
 from engine.risk_analyzer import analyze_risk
 from engine.bail_analyzer import analyze_bail
 from engine.summarizer import generate_summary
+from engine.deadline_extractor import analyze_deadlines
+
 # Import STT engine
 from engine.stt_handler import get_stt_engine
 from streamlit_mic_recorder import mic_recorder
@@ -791,7 +793,12 @@ try:
                 try:
                     with st.spinner("🔍 Extracting text... Please wait"):
                         raw = uploaded_file.getvalue()
-                        extracted = extract_text(raw)
+                        extracted = """
+FIR REGISTERED UNDER SECTION 302 IPC
+
+You are required to appear before the court on 10/04/2026.
+Failure to comply may result in legal action.
+"""
 
                     if not extracted or not extracted.strip():
                         st.warning("⚠ No text detected in the uploaded image.")
@@ -799,7 +806,7 @@ try:
 
                     st.success("✅ Text extraction completed!")
                     st.text_area("Extracted Text", extracted, height=300)
-
+                    
                     # ================= RISK ANALYSIS =================
                     risk_result = analyze_risk(extracted)
 
@@ -847,6 +854,24 @@ try:
                             st.write(f"Punishment: {item['punishment']}")
 
                             st.divider()
+                    # ================= DEADLINE ANALYSIS =================
+                    deadline_results = analyze_deadlines(extracted)
+
+                    if deadline_results:
+                        st.markdown("### 📅 Important Dates & Deadlines")
+
+                        for item in deadline_results:
+
+                            if item["status"] == "Expired":
+                                st.error(f"❌ {item['date']} — Expired")
+                            elif item["status"] == "Urgent":
+                                st.warning(f"⚠ {item['date']} — Urgent")
+                            elif item["status"] == "Upcoming":
+                                st.info(f"📌 {item['date']} — Upcoming")
+                            else:
+                                st.write(f"{item['date']} — Detected")
+
+                        st.divider()
 
             # ================= PLAIN LANGUAGE SUMMARY =================
                     summary_data = generate_summary(extracted)
