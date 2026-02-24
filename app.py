@@ -18,6 +18,7 @@ from engine.bookmark_manager import add_bookmark
 # Import STT engine
 from engine.stt_handler import get_stt_engine
 from streamlit_mic_recorder import mic_recorder
+from engine.system_status import get_system_status
 
 # ===== READ THEME FROM URL =====
 query_theme = st.query_params.get("theme")
@@ -1097,7 +1098,31 @@ Failure to comply may result in legal action.
                         st.info("No citations found.")
             else:
                 st.error("RAG Engine offline.")
+    # ============================================================================
+    # PAGE: SETTINGS / SYSTEM STATUS
+    # ============================================================================
+    elif current_page == "Settings":
 
+        st.markdown("## ⚙️ Settings / System Status")
+        st.markdown("View system health and engine availability.")
+        st.divider()
+
+        status = get_system_status()
+
+        st.markdown("### 🖥️ System Health Dashboard")
+
+        col1, col2 = st.columns(2)
+
+        items = list(status.items())
+
+        for i, (name, ok) in enumerate(items):
+            with (col1 if i % 2 == 0 else col2):
+                if ok:
+                    st.success(f"🟢 {name} — Available")
+                else:
+                    st.error(f"🔴 {name} — Not Available")
+
+        st.info("If any module shows Not Available, please check installation or configuration.")
     # ============================================================================
     # PAGE: PRIVACY POLICY
     # ============================================================================
@@ -1358,16 +1383,5 @@ except Exception as e:
     st.error("🚨 An unexpected error occurred.")
     st.exception(e)
 
-# # Footer Bar
-# st.markdown(
-#     """
-# <div class="app-footer">
-#   <div class="app-footer-inner">
-#     <span class="top-chip">Offline Mode</span>
-#     <span class="top-chip">Privacy First</span>
-#     <a class="top-credit" href="https://www.flaticon.com/" target="_blank">Icons: Flaticon</a>
-#   </div>
-# </div>
-# """,
-#     unsafe_allow_html=True,
-# )
+
+
