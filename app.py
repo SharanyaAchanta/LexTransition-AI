@@ -17,6 +17,7 @@ from engine.deadline_extractor import analyze_deadlines
 # Import STT engine
 from engine.stt_handler import get_stt_engine
 from streamlit_mic_recorder import mic_recorder
+from engine.system_status import get_system_status
 
 # ===== READ THEME FROM URL =====
 query_theme = st.query_params.get("theme")
@@ -46,8 +47,7 @@ if os.path.exists(TEMP_AUDIO_DIR):
         except Exception:
             pass # File might be playing 
 
-# Page Configuration
-st.set_page_config(page_title="LexTransition AI", page_icon="⚖️", layout="wide")
+
 
 # Access the CSS file
 def load_css(file_path):
@@ -126,47 +126,47 @@ def _goto(page: str):
         pass
     st.rerun()
 
-# Header Navigation
-nav_items = [
-    ("Home", "Home"),
-    ("Mapper", "IPC -> BNS Mapper"),
-    ("OCR", "Document OCR"),
-    ("Fact", "Fact Checker"),
-    ("Settings", "Settings / About"),
-]
+# # Header Navigation
+# nav_items = [
+#     ("Home", "Home"),
+#     ("Mapper", "IPC -> BNS Mapper"),
+#     ("OCR", "Document OCR"),
+#     ("Fact", "Fact Checker"),
+#     ("Settings", "Settings / About"),
+# ]
 
-header_links = []
-for page, label in nav_items:
-    page_html = html_lib.escape(page)
-    label_html = html_lib.escape(label)
-    active_class = "active" if st.session_state.current_page == page else ""
-    header_links.append(
-        f'<a class="top-nav-link {active_class}" href="?page={page_html}" target="_self" '
-        f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
-    )
+# header_links = []
+# for page, label in nav_items:
+#     page_html = html_lib.escape(page)
+#     label_html = html_lib.escape(label)
+#     active_class = "active" if st.session_state.current_page == page else ""
+#     header_links.append(
+#         f'<a class="top-nav-link {active_class}" href="?page={page_html}" target="_self" '
+#         f'title="{label_html}" aria-label="{label_html}">{label_html}</a>'
+#     )
 
-st.markdown(
-    f"""
-<!-- Compact fixed site logo -->
-<a class="site-logo" href="?page=Home" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
+# st.markdown(
+#     f"""
+# <!-- Compact fixed site logo -->
+# <a class="site-logo" href="?page=Home" target="_self"><span class="logo-icon">⚖️</span><span class="logo-text">LexTransition AI</span></a>
 
-<div class="top-header">
-  <div class="top-header-inner">
-    <div class="top-header-left">
-      <!-- header brand is hidden by CSS; left here for semantics/accessibility -->
-      <a class="top-brand" href="?page=Home" target="_self">LexTransition AI</a>
-    </div>
-    <div class="top-header-center">
-      <div class="top-nav">{''.join(header_links)}</div>
-    </div>
-    <div class="top-header-right">
-      <a class="top-cta" href="?page=Fact" target="_self">Get Started</a>
-    </div>
-  </div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+# <div class="top-header">
+#   <div class="top-header-inner">
+#     <div class="top-header-left">
+#       <!-- header brand is hidden by CSS; left here for semantics/accessibility -->
+#       <a class="top-brand" href="?page=Home" target="_self">LexTransition AI</a>
+#     </div>
+#     <div class="top-header-center">
+#       <div class="top-nav">{''.join(header_links)}</div>
+#     </div>
+#     <div class="top-header-right">
+#       <a class="top-cta" href="?page=Fact" target="_self">Get Started</a>
+#     </div>
+#   </div>
+# </div>
+# """,
+#     unsafe_allow_html=True,
+# )
 
 # Attempt to import engines (use stubs if missing)
 try:
@@ -1078,7 +1078,31 @@ Failure to comply may result in legal action.
                         st.info("No citations found.")
             else:
                 st.error("RAG Engine offline.")
+    # ============================================================================
+    # PAGE: SETTINGS / SYSTEM STATUS
+    # ============================================================================
+    elif current_page == "Settings":
 
+        st.markdown("## ⚙️ Settings / System Status")
+        st.markdown("View system health and engine availability.")
+        st.divider()
+
+        status = get_system_status()
+
+        st.markdown("### 🖥️ System Health Dashboard")
+
+        col1, col2 = st.columns(2)
+
+        items = list(status.items())
+
+        for i, (name, ok) in enumerate(items):
+            with (col1 if i % 2 == 0 else col2):
+                if ok:
+                    st.success(f"🟢 {name} — Available")
+                else:
+                    st.error(f"🔴 {name} — Not Available")
+
+        st.info("If any module shows Not Available, please check installation or configuration.")
     # ============================================================================
     # PAGE: PRIVACY POLICY
     # ============================================================================
@@ -1339,16 +1363,3 @@ except Exception as e:
     st.error("🚨 An unexpected error occurred.")
     st.exception(e)
 
-# Footer Bar
-st.markdown(
-    """
-<div class="app-footer">
-  <div class="app-footer-inner">
-    <span class="top-chip">Offline Mode</span>
-    <span class="top-chip">Privacy First</span>
-    <a class="top-credit" href="https://www.flaticon.com/" target="_blank">Icons: Flaticon</a>
-  </div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
