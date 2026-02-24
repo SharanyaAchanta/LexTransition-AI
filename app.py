@@ -13,6 +13,7 @@ from engine.risk_analyzer import analyze_risk
 from engine.bail_analyzer import analyze_bail
 from engine.summarizer import generate_summary
 from engine.deadline_extractor import analyze_deadlines
+from engine.autocomplete import get_suggestions
 
 from engine.pdf_exporter import generate_pdf_report
 
@@ -574,19 +575,33 @@ try:
         st.markdown('<div class="mapper-wrap">', unsafe_allow_html=True)
         
         # --- 3-column layout: Input | Mic | Search ---
-        col1, col2, col3 = st.columns([3, 1, 1])
-        
+        col1, col2, col3 = st.columns([3,1,1])
+
         with col1:
-            # We bind the value to our session state so Voice Input auto-fills this box
             search_query = st.text_input(
-                "Search", # A label is required, but we hide it below
+                "Search",
                 value=st.session_state.get('mapper_search_val', ''),
                 placeholder="e.g., 420, 302, 378",
-                label_visibility="collapsed" # Aligns perfectly with the buttons
+                label_visibility="collapsed"
             )
-            
+
+            suggestions = get_suggestions(search_query)
+
+            if suggestions:
+                selected = st.selectbox(
+                    "",
+                    suggestions,
+                    index=None,
+                    placeholder="Suggestions...",
+                    key="autocomplete_select"
+                )
+
+                if selected:
+                    st.session_state['mapper_search_val'] = selected
+                    st.session_state['auto_search'] = True
+                    st.rerun()
+
         with col2:
-            # --- STT Integration Widget ---
             audio_dict = mic_recorder(
                 start_prompt="🎙️ Speak",
                 stop_prompt="🛑 Stop",
@@ -596,7 +611,6 @@ try:
 
         with col3:
             search_btn = st.button("🔍 Find BNS Eq.", use_container_width=True)
-
         # --- Process Audio ---
         audio_val = audio_dict['bytes'] if audio_dict else None
         
