@@ -13,7 +13,11 @@ from engine.risk_analyzer import analyze_risk
 from engine.bail_analyzer import analyze_bail
 from engine.summarizer import generate_summary
 from engine.deadline_extractor import analyze_deadlines
+
 from engine.pdf_exporter import generate_pdf_report
+
+from engine.bookmark_manager import add_bookmark
+
 
 # Import STT engine
 from engine.stt_handler import get_stt_engine
@@ -656,6 +660,12 @@ try:
                 <div style="font-size:12px;opacity:0.8;margin-top:10px;">Source: {html_lib.escape(source)}</div>
             </div>
             """, unsafe_allow_html=True)
+
+            st.text_input(
+    "Optional Notes",
+    key="bookmark_notes_input",
+    placeholder="Add your personal notes here..."
+)
             
             st.write("###")
 
@@ -691,6 +701,7 @@ try:
                     else:
                         st.error("❌ LLM Engine failed to generate summary.")
             with col_d:
+
                 if st.button("📄 Export PDF", use_container_width=True):
 
                     try:
@@ -718,6 +729,20 @@ try:
 
                     except Exception as e:
                         st.error(f"❌ Failed to generate PDF: {e}")
+
+                if st.button("🔖 Save to Bookmarks", use_container_width=True):
+                    try:
+                        section = f"IPC {ipc} → {bns}"
+                        title = notes if notes else f"IPC {ipc}"
+                        user_notes = st.session_state.get("bookmark_notes_input", "")
+
+                        add_bookmark(section, title, user_notes)
+
+                        st.success("✅ Saved to bookmarks successfully!")
+
+                    except Exception as e:
+                        st.error(f"❌ Failed to save bookmark: {e}")           
+
             # --- STEP 4: Persistent Views (Rendered outside the columns) ---
             
             # 1. AI Analysis View
@@ -1390,4 +1415,6 @@ Failure to comply may result in legal action.
 except Exception as e:
     st.error("🚨 An unexpected error occurred.")
     st.exception(e)
+
+
 
