@@ -488,6 +488,18 @@ def calculate_confidence(result: dict):
     else:
         return "Low", "🔴"
     
+ # ================= CONTEXT MEMORY =================
+if "context_memory" not in st.session_state:
+    st.session_state.context_memory = ""
+
+def store_context(text: str):
+    """Store text into reusable memory."""
+    if text:
+        st.session_state.context_memory = text
+
+def clear_context():
+    """Clear stored context."""
+    st.session_state.context_memory = ""   
 # reading the page url
 def _read_url_page():
     try:
@@ -792,6 +804,18 @@ try:
                 st.error(f"{confidence_icon} Low Confidence Mapping")
             st.write("###")
 
+            # ===== Context Memory Buttons =====
+            col_ctx1, col_ctx2 = st.columns(2)
+
+            with col_ctx1:
+                if st.button("📥 Use in Fact Checker"):
+                    store_context(f"IPC {ipc} mapped to {bns}. Notes: {notes}")
+                    st.success("Stored in memory. Go to Fact Checker.")
+
+            with col_ctx2:
+                if st.button("🧹 Clear Memory"):
+                    clear_context()
+                    st.info("Context cleared.")
             # --- STEP 3: Action Buttons ---
             col_a, col_b, col_c, col_d = st.columns(4)
             
@@ -1015,6 +1039,12 @@ Failure to comply may result in legal action.
                     st.success("✅ Text extraction completed!")
                     st.text_area("Extracted Text", extracted, height=300)
 
+                    # Store OCR text in memory
+                    store_context(extracted)
+
+                    if st.button("📥 Use in Fact Checker"):
+                        st.success("OCR text stored for reuse.")
+
                     copy_to_clipboard(extracted, "Copy OCR Text")
                     
                     # ================= RISK ANALYSIS =================
@@ -1204,9 +1234,11 @@ Failure to comply may result in legal action.
         
         with col1:
             # Bind the value to our session state so Voice Input auto-fills this box
+            default_question = st.session_state.get("context_memory", "") or st.session_state.get('fact_search_val', '')
+
             user_question = st.text_input(
                 "Question", 
-                value=st.session_state.get('fact_search_val', ''),
+                value=default_question,
                 placeholder="e.g., penalty for cheating?",
                 label_visibility="collapsed"
             )
@@ -1222,6 +1254,21 @@ Failure to comply may result in legal action.
 
         with col3:
             verify_btn = st.button("📖 Verify", use_container_width=True)
+        
+        # ===== Show Context Memory =====
+        if st.session_state.context_memory:
+            col_m1, col_m2 = st.columns(2)
+
+            with col_m1:
+                st.info("📌 Using stored context")
+
+            with col_m2:
+                if st.button("🧹 Clear Memory"):
+                    clear_context()
+                    st.rerun()
+
+            with st.expander("📌 Stored Context"):
+                st.write(st.session_state.context_memory)
 
         # --- Process Audio Input ---
         audio_val = audio_dict['bytes'] if audio_dict else None
