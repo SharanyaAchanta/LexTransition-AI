@@ -1,40 +1,53 @@
 """
 Local LLM adapter (optional).
 - If LTA_OLLAMA_URL is set, it will POST prompt to that endpoint and return text.
-- If not configured, falls back to a lightweight extractive summary (first N sentences).
+- If not configured, falls back to a lightweight extractive summary.
 """
 import os
 import json
 from typing import Optional
 
-OLLAMA_URL: Optional[str] = os.environ.get("LTA_OLLAMA_URL")  # e.g., http://localhost:11434
+from utils.timeout_handler import execute_with_timeout_retry, AITimeoutError
+
+OLLAMA_URL: Optional[str] = os.environ.get("LTA_OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL: str = os.environ.get("LTA_OLLAMA_MODEL", "llama2")
 
+
 def _extractive_summary(text: str, max_sentences: int = 3) -> str:
-    # naive sentence split
     sentences = [s.strip() for s in text.replace("\n", " ").split(".") if s.strip()]
     if not sentences:
         return ""
-    return ". ".join(sentences[:max_sentences]) + (". " if len(sentences) > 0 else "")
+    return ". ".join(sentences[:max_sentences]) + "."
+
 
 def summarize(text: str, question: Optional[str] = None) -> str:
     if OLLAMA_URL:
         try:
-            import requests  # local import to keep dependency optional
+            import requests
+
             payload = {
                 "model": OLLAMA_MODEL,
-                "prompt": f"Summarize the following legal text in plain language:{' Question: '+question if question else ''}\n\n{text}",
-                # Ollama streams newline-delimited JSON by default; disable for simpler parsing.
+                "prompt": (
+                    f"Summarize the following legal text in plain language:"
+                    f"{' Question: ' + question if question else ''}\n\n{text}"
+                ),
                 "stream": False,
             }
-            resp = requests.post(f"{OLLAMA_URL}/api/generate", json=payload, timeout=15)
-            if resp.ok:
+
+            def _call_ollama(timeout):
+                return requests.post(
+                    f"{OLLAMA_URL}/api/generate",
+                    json=payload,
+                    timeout=timeout,
+                )
+
+            resp = execute_with_timeout_retry(_call_ollama)
+
+            if resp and resp.ok:
                 try:
                     data = resp.json()
-                    # Ollama typically returns {"response": "..."} for /api/generate
                     return data.get("response") or data.get("text") or str(data)
                 except Exception:
-                    # Fallback: handle NDJSON streaming responses (or unexpected formats)
                     combined = []
                     for line in resp.text.splitlines():
                         line = line.strip()
@@ -49,7 +62,11 @@ def summarize(text: str, question: Optional[str] = None) -> str:
                             combined.append(str(chunk))
                     if combined:
                         return "".join(combined).strip()
+
+        except AITimeoutError:
+            raise  # Let app.py handle UI message
+
         except Exception:
             pass
-    # fallback
+
     return _extractive_summary(text)

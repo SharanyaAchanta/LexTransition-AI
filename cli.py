@@ -4,18 +4,31 @@ import argparse
 import json
 import sys
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 from engine.mapping_logic import map_ipc_to_bns
+from engine.bookmark_manager import (
+    add_bookmark,
+    view_bookmarks,
+    edit_bookmark,
+    delete_bookmark,
+)
 from engine.db import (
     import_mappings_from_csv,
     import_mappings_from_excel,
 )
-
+from engine.history_manager import (
+    add_history,
+    view_history,
+    clear_history,
+)
 
 def _cmd_map(args: argparse.Namespace) -> int:
     result = map_ipc_to_bns(args.ipc_section)
+    add_history(args.ipc_section, result)
     if not result:
-        print("No mapping found")
+        logger.info("No mapping found")
         return 1
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
@@ -53,6 +66,39 @@ def _cmd_diagnostics(_: argparse.Namespace) -> int:
     }
     print(json.dumps(diagnostics, ensure_ascii=False, indent=2))
     return 0
+def _cmd_bookmark_add(args: argparse.Namespace) -> int:
+    add_bookmark(args.section, args.title, args.notes)
+    return 0
+
+
+def _cmd_bookmark_list(_: argparse.Namespace) -> int:
+    view_bookmarks()
+    return 0
+
+
+def _cmd_bookmark_edit(args: argparse.Namespace) -> int:
+    edit_bookmark(args.id, args.notes)
+    return 0
+
+
+def _cmd_bookmark_delete(args: argparse.Namespace) -> int:
+    delete_bookmark(args.id)
+    return 0
+
+
+def _cmd_history_list(_: argparse.Namespace) -> int:
+    view_history()
+    return 0
+
+
+def _cmd_history_clear(_: argparse.Namespace) -> int:
+    clear_history()
+    return 0
+  
+def _cmd_bookmark_delete(args: argparse.Namespace) -> int:
+    delete_bookmark(args.id)
+    return 0
+
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -75,6 +121,31 @@ def build_parser() -> argparse.ArgumentParser:
 
     diag_cmd = sub.add_parser("diagnostics", help="Show runtime diagnostics")
     diag_cmd.set_defaults(func=_cmd_diagnostics)
+
+    history_list = sub.add_parser("history-list", help="View search history")
+    history_list.set_defaults(func=_cmd_history_list)
+
+    history_clear = sub.add_parser("history-clear", help="Clear search history")
+    history_clear.set_defaults(func=_cmd_history_clear)
+
+        # Bookmark Commands
+    bookmark_add = sub.add_parser("bookmark-add", help="Add a bookmark with notes")
+    bookmark_add.add_argument("--section", required=True)
+    bookmark_add.add_argument("--title", required=True)
+    bookmark_add.add_argument("--notes", default="")
+    bookmark_add.set_defaults(func=_cmd_bookmark_add)
+
+    bookmark_list = sub.add_parser("bookmark-list", help="List all bookmarks")
+    bookmark_list.set_defaults(func=_cmd_bookmark_list)
+
+    bookmark_edit = sub.add_parser("bookmark-edit", help="Edit bookmark notes")
+    bookmark_edit.add_argument("--id", required=True)
+    bookmark_edit.add_argument("--notes", required=True)
+    bookmark_edit.set_defaults(func=_cmd_bookmark_edit)
+
+    bookmark_delete = sub.add_parser("bookmark-delete", help="Delete a bookmark")
+    bookmark_delete.add_argument("--id", required=True)
+    bookmark_delete.set_defaults(func=_cmd_bookmark_delete)
 
     return parser
 

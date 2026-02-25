@@ -1,10 +1,20 @@
+
 import os
 import requests
 import json
+import hashlib
 from typing import Dict, Optional
+
+# Simple in-memory cache
+from typing import Dict
+import time
+
+AI_CACHE: Dict[str, Dict] = {}
+CACHE_TTL_SECONDS = 300  # 5 minutes (configurable later)
 
 # import db, mapping_logic engines
 from engine import db, mapping_logic
+from utils.timeout_handler import execute_with_timeout_retry, AITimeoutError
 
 # Configurable via environment variables (Good for Docker)
 OLLAMA_URL = os.environ.get("LTA_OLLAMA_URL", "http://localhost:11434")
@@ -43,21 +53,35 @@ def compare_ipc_bns(user_query: str) -> Dict[str, str]:
         "analysis": ai_analysis,
         "metadata": mapping  # Contains category, source, notes
     }
-
 def _call_ollama_diff(ipc_text: str, bns_text: str) -> str:
-    """
-    Helper to send the prompt to the local Ollama instance.
-    """
+
+    current_time = time.time()
+
+    raw_key = f"{ipc_text}:{bns_text}"
+    cache_key = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+    # Check cache first
+    if cache_key in AI_CACHE:
+        cached_entry = AI_CACHE[cache_key]
+
+        if current_time < cached_entry["expiry"]:
+            print(f"[CACHE HIT] {cache_key[:40]}...")
+            return cached_entry["value"]
+        else:
+            print(f"[CACHE EXPIRED] {cache_key[:40]}...")
+            del AI_CACHE[cache_key]
+
+    # If it wasn't in the cache, or it expired, it drops down here to call Ollama!
     if not OLLAMA_URL:
         return "ERROR: AI Offline. Please check your Ollama connection."
-    # safety check
+
     if "Text not available" in ipc_text or "Text not available" in bns_text:
         return "ERROR: Cannot analyze. Full legal text is missing."
 
     prompt = (
         f"You are a Senior Legal Analyst. Compare the following two Indian laws.\n\n"
-        f"1. OLD LAW (IPC): {ipc_text}\n"
-        f"2. NEW LAW (BNS): {bns_text}\n\n"
+        f"1. Old Law (IPC): {ipc_text}\n"
+        f"2. New Law (BNS): {bns_text}\n\n"
         f"Task: Identify substantive changes. Ignore minor formatting differences.\n"
         f"Output specific bullet points on:\n"
         f"- Punishment Severity (Any increase?)\n"
@@ -66,20 +90,42 @@ def _call_ollama_diff(ipc_text: str, bns_text: str) -> str:
         f"Keep the response concise and strictly factual."
     )
 
+    payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False
+    }
+
     try:
-        payload = {"model": OLLAMA_MODEL, 
-                   "prompt": prompt, 
-                   "stream": False}
-        
-        resp = requests.post(f"{OLLAMA_URL}/api/generate", json=payload, timeout=30)
-        
+        def _request(timeout):
+            return requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json=payload,
+                timeout=timeout
+            )
+
+        resp = execute_with_timeout_retry(_request, retries=2, timeout=30)
+
         if resp.status_code == 200:
-            return resp.json().get("response", "No response generated.")
+           analysis = resp.json().get("response", "No response generated.")
+           print(f"[CACHE STORE] {cache_key[:40]}...")
+
+           AI_CACHE[cache_key] = {
+                "value": analysis,
+                "expiry": time.time() + CACHE_TTL_SECONDS
+            }
+
+           return analysis
+        
         else:
             return f"ERROR: Ollama returned status {resp.status_code}"
-            
+
+    except AITimeoutError:
+        raise
+
     except requests.exceptions.ConnectionError:
         return "ERROR: Connection refused. Is Ollama running? (Try 'ollama serve')"
+
     except Exception as e:
         return f"ERROR: {str(e)}"
 

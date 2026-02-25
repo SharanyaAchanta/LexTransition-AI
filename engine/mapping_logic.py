@@ -17,6 +17,8 @@ The mapping database includes 65+ verified mappings organized by offense categor
 Sources: Ministry of Home Affairs, Official Gazette of India
 """
 import os
+import logging
+logger = logging.getLogger(__name__)
 import json
 from difflib import get_close_matches
 from typing import Optional, List, Dict
@@ -66,7 +68,7 @@ def _load_mappings():
         
         if not _mappings:
             # If DB is empty, use defaults and save to DB
-            print("📦 DB is empty. Initializing with default mappings...")
+            logger.info("📦 DB is empty. Initializing with default mappings...")
             _mappings = _default_mappings.copy()
             for ipc_section, mapping in _mappings.items():
                 db.insert_mapping(
@@ -79,7 +81,7 @@ def _load_mappings():
                     mapping["category"]
                 )
     except Exception as e:
-        print(f"failed to load DB: {e}")
+        logger.error(f"Failed to load DB: {e}", exc_info=True)
         _mappings = _default_mappings.copy()
 
 _load_mappings()
@@ -117,6 +119,18 @@ def add_mapping(ipc_section: str, bns_section: str,
     Add a new IPC to BNS mapping at runtime.
     """
     key = str(ipc_section).strip()
+
+    # Backward compatibility for older positional calls:
+    # add_mapping(ipc, bns, notes, source, persist=False)
+    if notes == "" and source == "user" and category == "User Added":
+        if bns_full_text:
+            notes = ipc_full_text
+            source = bns_full_text
+            ipc_full_text = ""
+            bns_full_text = ""
+        elif ipc_full_text:
+            notes = ipc_full_text
+            ipc_full_text = ""
     
     # Update dictionary immediately
     mapping_data = {
@@ -129,7 +143,16 @@ def add_mapping(ipc_section: str, bns_section: str,
     }
     
     if persist:
-        success = db.insert_mapping(key, bns_section, ipc_full_text, bns_full_text, notes, source, category)
+        success = db.upsert_mapping(
+            ipc_section=key,
+            bns_section=bns_section,
+            ipc_full_text=ipc_full_text,
+            bns_full_text=bns_full_text,
+            notes=notes,
+            source=source,
+            category=category,
+            actor="ui",
+        )
         if success:
             _mappings[key] = mapping_data
         return success

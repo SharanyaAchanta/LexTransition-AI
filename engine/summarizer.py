@@ -1,0 +1,56 @@
+import re
+
+
+def extract_sections(text: str):
+    """
+    Detect IPC/BNS sections only when keywords like
+    Section / Sec / U/S are present.
+    Avoid capturing dates.
+    """
+    import re
+
+    if not text:
+        return []
+
+    pattern = r"(?:section|sec|u/s)\s*(\d{1,3}[A-Za-z]?)"
+
+    matches = re.findall(pattern, text, re.IGNORECASE)
+
+    return list(set(matches))
+
+
+def detect_authority(text):
+    authorities = []
+
+    if "police" in text.lower():
+        authorities.append("Police")
+
+    if "court" in text.lower():
+        authorities.append("Court")
+
+    return authorities
+
+
+def generate_summary(text: str):
+    if not text:
+        return {}
+
+    sections = extract_sections(text)
+    authorities = detect_authority(text)
+
+    action_points = []
+
+    if "appear" in text.lower():
+        action_points.append("You may need to appear before authorities.")
+
+    if "notice" in text.lower():
+        action_points.append("This document is an official notice.")
+
+    summary = {
+        "sections": list(set(sections)),
+        "authorities": authorities,
+        "action_points": action_points,
+        "plain_summary": "This document contains legal instructions. Please review the sections mentioned and follow the guidance."
+    }
+
+    return summary
