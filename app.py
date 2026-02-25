@@ -456,6 +456,35 @@ def copy_to_clipboard(text, label="Copy"):
     """
 
     components.html(html_code, height=40)
+
+def calculate_confidence(result: dict):
+    """
+    Determine confidence level for IPC → BNS mapping.
+    """
+
+    if not result:
+        return "Low", "🔴"
+
+    source = result.get("source", "")
+    notes = result.get("notes", "")
+    ipc_text = result.get("ipc_full_text", "")
+
+    score = 0
+
+    if source:
+        score += 1
+    if notes:
+        score += 1
+    if ipc_text:
+        score += 1
+
+    if score >= 3:
+        return "High", "🟢"
+    elif score == 2:
+        return "Medium", "🟡"
+    else:
+        return "Low", "🔴"
+    
 # reading the page url
 def _read_url_page():
     try:
@@ -703,13 +732,14 @@ try:
             result = st.session_state['last_result']
             ipc = st.session_state['last_query']
             bns = result.get("bns_section", "N/A")
+            confidence_level, confidence_icon = calculate_confidence(result)
             notes = result.get("notes", "See source mapping.")
             source = result.get("source", "mapping_db")
             
             # Render Result Card
             st.markdown(f"""
             <div class="result-card">
-                <div class="result-badge">Mapping • found</div>
+                <div class="result-badge">Mapping • found • {confidence_icon} {confidence_level} Confidence</div>
                 <div class="result-grid">
                     <div class="result-col">
                         <div class="result-col-title">IPC Section</div>
@@ -731,7 +761,12 @@ try:
     key="bookmark_notes_input",
     placeholder="Add your personal notes here..."
 )
-            
+            if confidence_level == "High":
+                st.success(f"{confidence_icon} High Confidence Mapping")
+            elif confidence_level == "Medium":
+                st.warning(f"{confidence_icon} Medium Confidence Mapping")
+            else:
+                st.error(f"{confidence_icon} Low Confidence Mapping")
             st.write("###")
 
             # --- STEP 3: Action Buttons ---
