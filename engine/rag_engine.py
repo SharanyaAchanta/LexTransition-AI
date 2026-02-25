@@ -12,7 +12,7 @@ import json
 import hashlib
 import streamlit as st
 import numpy as np
-
+from engine.preprocessing import preprocess_query
 try:
     import pdfplumber
 except Exception:
@@ -205,6 +205,7 @@ def _emb_search(query: str, top_k: int = 3):
         return None
 
 def search_pdfs(query: str, top_k: int = 3):
+    query = preprocess_query(query)
     """
     Default: if an embeddings engine is configured -> use it.
     Else if internal embeddings available -> use that.
