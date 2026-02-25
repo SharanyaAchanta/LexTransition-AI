@@ -210,7 +210,8 @@ except Exception:
 # Index PDFs at startup if engine available
 if ENGINES_AVAILABLE and not st.session_state.get("pdf_indexed"):
     try:
-        index_pdfs("law_pdfs")
+        with st.spinner("📚 Indexing legal documents..."):
+            index_pdfs("law_pdfs")
         st.session_state.pdf_indexed = True
     except Exception:
         pass
@@ -812,10 +813,11 @@ try:
                             "Source": source,
                         }
 
-                        pdf_path = generate_pdf_report(
-                            filename=f"mapping_{ipc}.pdf",
-                            mapping_data=mapping_data,
-                        )
+                        with st.spinner("📄 Generating PDF report..."):
+                            pdf_path = generate_pdf_report(
+                                filename=f"mapping_{ipc}.pdf",
+                                mapping_data=mapping_data,
+                            )
 
                         with open(pdf_path, "rb") as f:
                             st.download_button(
@@ -1225,7 +1227,7 @@ Failure to comply may result in legal action.
         # --- Search & TTS Output Logic ---
         if user_question and verify_btn:
             if ENGINES_AVAILABLE:
-                with st.spinner("Searching documents..."):
+                with st.spinner("🔍 Searching legal documents and citations..."):
                     res = search_pdfs(user_question.strip())
                     
                     if res:
