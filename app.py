@@ -422,6 +422,40 @@ def render_agent_audio(audio_path, title="🎙️ AI Agent Dictation"):
     """
     st.markdown(custom_html, unsafe_allow_html=True)
 
+def copy_to_clipboard(text, label="Copy"):
+    """Render copy-to-clipboard button."""
+    import streamlit.components.v1 as components
+
+    if not text:
+        return
+
+    button_id = f"copy_btn_{abs(hash(text))}"
+
+    html_code = f"""
+        <button id="{button_id}" 
+            style="
+                background:#2563eb;
+                color:white;
+                border:none;
+                padding:6px 12px;
+                border-radius:6px;
+                cursor:pointer;
+                font-size:12px;
+                margin-bottom:6px;
+            ">
+            📋 {label}
+        </button>
+
+        <script>
+        const btn = document.getElementById("{button_id}");
+        btn.onclick = function() {{
+            navigator.clipboard.writeText(`{text}`);
+            btn.innerText = "✅ Copied";
+        }};
+        </script>
+    """
+
+    components.html(html_code, height=40)
 # reading the page url
 def _read_url_page():
     try:
@@ -690,7 +724,8 @@ try:
                 <div style="font-size:12px;opacity:0.8;margin-top:10px;">Source: {html_lib.escape(source)}</div>
             </div>
             """, unsafe_allow_html=True)
-
+            copy_text = f"IPC {ipc} → BNS {bns}\nNotes: {notes}\nSource: {source}"
+            copy_to_clipboard(copy_text, "Copy Mapping")
             st.text_input(
     "Optional Notes",
     key="bookmark_notes_input",
@@ -795,6 +830,7 @@ try:
                         with c2:
                             st.markdown("**🤖 AI Comparison**")
                             st.success(analysis_text)
+                            copy_to_clipboard(analysis_text, "Copy Analysis")
 
                         with c3:
                             st.markdown(f"**⚖️ {bns} Text**")
@@ -815,10 +851,22 @@ try:
                 v1, v2 = st.columns(2)
                 with v1:
                     st.markdown("**IPC Original Text**")
-                    st.text_area("ipc_raw", result.get('ipc_full_text', 'No text found in DB'), height=250, disabled=True)
+                    copy_to_clipboard(result.get('ipc_full_text', ''), "Copy IPC Text")
+                    st.text_area(
+                        "ipc_raw",
+                        result.get('ipc_full_text', 'No text found in DB'),
+                        height=250,
+                        disabled=True
+                    )
                 with v2:
                     st.markdown("**BNS Updated Text**")
-                    st.text_area("bns_raw", result.get('bns_full_text', 'No text found in DB'), height=250, disabled=True)
+                    copy_to_clipboard(result.get('bns_full_text', ''), "Copy BNS Text")
+                    st.text_area(
+                        "bns_raw",
+                        result.get('bns_full_text', 'No text found in DB'),
+                        height=250,
+                        disabled=True
+                    )
 
         # Add Mapping Form (for when sections aren't found)
         with st.expander("➕ Add New Mapping to Database"):
@@ -882,6 +930,8 @@ Failure to comply may result in legal action.
 
                     st.success("✅ Text extraction completed!")
                     st.text_area("Extracted Text", extracted, height=300)
+
+                    copy_to_clipboard(extracted, "Copy OCR Text")
                     
                     # ================= RISK ANALYSIS =================
                     risk_result = analyze_risk(extracted)
