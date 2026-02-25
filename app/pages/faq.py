@@ -1,5 +1,5 @@
 """FAQ page for LexTransition AI."""
-
+import streamlit as st
 
 def render():
     """Render the FAQ page."""

@@ -43,7 +43,7 @@ def compare_ipc_bns(user_query: str) -> Dict[str, str]:
     bns_text = mapping.get('bns_full_text') or "Text not available in database."
 
     # Semantic Analysis
-    ai_analysis = _call_ollama_diff(ipc_text, bns_text, stream=True)
+    ai_analysis = _call_ollama_diff(ipc_text, bns_text)
 
     return {
         "ipc_section": ipc_id,

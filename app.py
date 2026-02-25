@@ -25,6 +25,9 @@ from engine.stt_handler import get_stt_engine
 from streamlit_mic_recorder import mic_recorder
 from engine.system_status import get_system_status
 
+# Import Intent engine
+from engine.intent_parser import parse_intent
+
 # ===== READ THEME FROM URL =====
 query_theme = st.query_params.get("theme")
 
@@ -674,10 +677,10 @@ try:
 
         with col3:
             search_btn = st.button("🔍 Find BNS Eq.", use_container_width=True)
+
         # --- Process Audio ---
         audio_val = audio_dict['bytes'] if audio_dict else None
         
-        # Process the audio only once
         if audio_val and audio_val != st.session_state.get("last_audio_mapper"):
             st.session_state["last_audio_mapper"] = audio_val 
             
@@ -692,15 +695,35 @@ try:
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
                     
-                # Whisper will transcribe "Section four twenty" as "Section 420".
-                # We use regex to extract just the alphanumeric section (e.g., "420", "498A")
-                nums = re.findall(r'\d+[a-zA-Z]?', text) 
-                voice_query = nums[0].upper() if nums else text.strip()
+                if text and text.strip() and not text.startswith("Error:"):
+                    intent_data = parse_intent(text)
+                    target = intent_data.get("target")
+                    action = intent_data.get("action")
+                    payload = intent_data.get("payload")
                     
-                # Update state and trigger an automatic search
-                st.session_state['mapper_search_val'] = voice_query
-                st.session_state['auto_search'] = True 
-                st.rerun()
+                    voice_query = target if target else text.strip()
+                    
+                    st.session_state['mapper_search_val'] = voice_query
+                    st.session_state['auto_search'] = True 
+                    
+                    # --- SAFELY INJECT UI TRIGGERS ---
+                    if action == "analyze":
+                        st.session_state['auto_analyze'] = True
+                        
+                    elif action == "raw_text":
+                        st.session_state['auto_raw_text'] = True
+                        
+                    elif action == "summarize":
+                        st.session_state['auto_summarize'] = True
+                        
+                    elif action == "bookmark_add":
+                        st.session_state['auto_bookmark_trigger'] = True
+                        st.session_state['auto_bookmark_note'] = payload if payload else ""
+                        
+                    elif action == "export_pdf":
+                        st.session_state['auto_export_pdf'] = True
+                        
+                    st.rerun()
 
         # --- Auto-Search from Voice ---
         if st.session_state.get('auto_search'):
@@ -773,37 +796,37 @@ try:
             col_a, col_b, col_c, col_d = st.columns(4)
             
             with col_a:
-                if st.button("🤖 Analyze Differences (AI)", use_container_width=True):
+                # Catch Analyze
+                if st.button("🤖 Analyze Differences (AI)", use_container_width=True) or st.session_state.pop('auto_analyze', False):
                     st.session_state['active_analysis'] = ipc
                     st.session_state['active_view_text'] = False
 
             with col_b:
-                if st.button("📄 View Raw Text", use_container_width=True):
+                # Catch Raw Text
+                if st.button("📄 View Raw Text", use_container_width=True) or st.session_state.pop('auto_raw_text', False):
                     st.session_state['active_view_text'] = True
                     st.session_state['active_analysis'] = None
 
             with col_c:
-                if st.button("📝 Summarize Note", use_container_width=True):
+                # Catch Summarize
+                if st.button("📝 Summarize Note", use_container_width=True) or st.session_state.pop('auto_summarize', False):
                     st.session_state['active_analysis'] = None
                     st.session_state['active_view_text'] = False
                     summary = llm_summarize(notes, question=f"Changes in {ipc}?")
                     if summary: 
                         st.success(f"Summary: {summary}")
 
-                        # --- TTS INTEGRATION START (Summary) ---
+                        # TTS INTEGRATION
                         with st.spinner("🎙️ Agent is preparing audio..."):
                             audio_path = tts_engine.generate_audio(summary, "temp_summary.wav")
                             if audio_path and os.path.exists(audio_path):
-                                # Replace st.audio with your new custom UI function
                                 render_agent_audio(audio_path, title="Legal Summary Dictation")
-                        # --- TTS INTEGRATION END ---
-
                     else:
                         st.error("❌ LLM Engine failed to generate summary.")
+
             with col_d:
-
-                if st.button("📄 Export PDF", use_container_width=True):
-
+                # Catch Export PDF
+                if st.button("📄 Export PDF", use_container_width=True) or st.session_state.pop('auto_export_pdf', False):
                     try:
                         mapping_data = {
                             "IPC Section": ipc,
@@ -811,37 +834,63 @@ try:
                             "Notes": notes,
                             "Source": source,
                         }
-
                         pdf_path = generate_pdf_report(
                             filename=f"mapping_{ipc}.pdf",
                             mapping_data=mapping_data,
                         )
-
+                        
+                        # Read the file bytes
                         with open(pdf_path, "rb") as f:
-                            st.download_button(
-                                "⬇ Download Report",
-                                f,
-                                file_name=f"mapping_{ipc}.pdf",
-                                mime="application/pdf",
-                            )
+                            pdf_bytes = f.read()
 
-                        st.success("✅ PDF generated successfully!")
+                        # --- AUTO-DOWNLOAD JAVASCRIPT INJECTION ---
+                        # Encode PDF to base64
+                        b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                        filename = f"mapping_{ipc}.pdf"
+                        
+                        # Create an invisible HTML link and force JavaScript to click it instantly
+                        auto_download_html = f"""
+                            <a id="auto-dl-{ipc}" href="data:application/pdf;base64,{b64_pdf}" download="{filename}"></a>
+                            <script>
+                                document.getElementById('auto-dl-{ipc}').click();
+                            </script>
+                        """
+                        # Inject the code invisibly into the app
+                        st.components.v1.html(auto_download_html, height=0)
+
+                        st.success("✅ PDF generated and downloaded automatically!")
+
+                        # Fallback button just in case the user has strict pop-up blockers enabled
+                        st.download_button(
+                            "⬇ Click if download didn't start",
+                            pdf_bytes,
+                            file_name=filename,
+                            mime="application/pdf",
+                        )
 
                     except Exception as e:
                         st.error(f"❌ Failed to generate PDF: {e}")
 
-                if st.button("🔖 Save to Bookmarks", use_container_width=True):
+                # Catch Bookmark (Using the safer boolean trigger!)
+                auto_bookmark_trigger = st.session_state.pop('auto_bookmark_trigger', False)
+                auto_bookmark_note = st.session_state.pop('auto_bookmark_note', "")
+                
+                if st.button("🔖 Save to Bookmarks", use_container_width=True) or auto_bookmark_trigger:
                     try:
                         section = f"IPC {ipc} → {bns}"
                         title = notes if notes else f"IPC {ipc}"
-                        user_notes = st.session_state.get("bookmark_notes_input", "")
+                        # Check if it was voice-triggered; if not, grab the text input
+                        user_notes = auto_bookmark_note if auto_bookmark_trigger else st.session_state.get("bookmark_notes_input", "")
 
                         add_bookmark(section, title, user_notes)
-
                         st.success("✅ Saved to bookmarks successfully!")
-
                     except Exception as e:
-                        st.error(f"❌ Failed to save bookmark: {e}")           
+                        st.error(f"❌ Failed to save bookmark: {e}") 
+            
+            # Catch Copy Mapping (Placed outside columns since it uses JS clipboard component)
+            if st.session_state.pop('auto_copy_mapping', False):
+                # We show a toast because web browsers block auto-copying without a physical mouse click
+                st.toast("📋 Mapping copied! (Note: Please click the 'Copy Mapping' icon to confirm browser clipboard access).")           
 
             # --- STEP 4: Persistent Views (Rendered outside the columns) ---
             
