@@ -12,6 +12,7 @@ import shutil
 import logging
 logger = logging.getLogger(__name__)
 import pandas as pd
+import streamlit as st
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -21,6 +22,13 @@ from engine import db_utils
 _base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _DB_FILE = os.path.join(_base_dir, "mapping_db.sqlite")
 _JSON_FILE = os.path.join(_base_dir, "mapping_db.json")
+
+def _clear_db_cache():
+    """Clear Streamlit database cache."""
+    try:
+        st.cache_data.clear()
+    except Exception as e:
+        logger.warning(f"Could not clear cache: {e}")
 
 def get_db_connection():
     """Get a database connection."""
@@ -140,6 +148,7 @@ def migrate_from_json():
 
         conn.commit()
         conn.close()
+        _clear_db_cache()
         logger.info(f"Successfully migrated {len(data)} mappings from JSON to database.")
 
     except Exception as e:
@@ -171,6 +180,7 @@ def insert_mapping(ipc_section: str, bns_section: str,
         _log_audit(cursor, "insert", ipc_section, None, new_value, actor=actor)
 
         conn.commit()
+        _clear_db_cache()
         return True
 
     except sqlite3.IntegrityError:
@@ -183,6 +193,7 @@ def insert_mapping(ipc_section: str, bns_section: str,
         if conn is not None:
             conn.close()
 
+@st.cache_data(ttl=3600)
 def get_mapping(ipc_section: str) -> Optional[Dict]:
     """Get a single mapping by IPC section."""
     try:
@@ -209,6 +220,7 @@ def get_mapping(ipc_section: str) -> Optional[Dict]:
         logger.error(f"Error getting mapping: {e}")
         return None
 
+@st.cache_data(ttl=3600)
 def get_all_mappings() -> Dict[str, Dict]:
     """Get all mappings as a dictionary."""
     try:
@@ -235,6 +247,7 @@ def get_all_mappings() -> Dict[str, Dict]:
         logger.error(f"Error getting all mappings: {e}")
         return {}
 
+@st.cache_data(ttl=3600)
 def get_mappings_by_category(category: str) -> Dict[str, Dict]:
     """Get mappings by category."""
     try:
@@ -261,6 +274,7 @@ def get_mappings_by_category(category: str) -> Dict[str, Dict]:
         logger.error(f"Error getting mappings by category: {e}")
         return {}
 
+@st.cache_data(ttl=3600)
 def get_categories() -> List[str]:
     """Get all unique categories."""
     try:
@@ -277,6 +291,7 @@ def get_categories() -> List[str]:
         logger.error(f"Error getting categories: {e}")
         return []
 
+@st.cache_data(ttl=3600)
 def get_mapping_count() -> int:
     """Get total number of mappings."""
     try:
@@ -293,6 +308,7 @@ def get_mapping_count() -> int:
         logger.error(f"Error getting mapping count: {e}")
         return 0
 
+@st.cache_data(ttl=3600)
 def get_metadata() -> Dict:
     """Get metadata from database."""
     try:
@@ -362,6 +378,7 @@ def update_mapping(
         }
         _log_audit(cursor, "update", ipc_section, previous, new_value, actor=actor)
         conn.commit()
+        _clear_db_cache()
         return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Error updating mapping: {e}")
@@ -492,6 +509,7 @@ def restore_database(backup_path: str) -> bool:
             if pre_restore is None:
                 return False
         shutil.copy2(backup_path, _DB_FILE)
+        _clear_db_cache()
         return _check_sqlite_integrity(_DB_FILE)
     except Exception as e:
         logger.error(f"Error restoring database: {e}")
