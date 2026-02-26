@@ -183,24 +183,31 @@ def _emb_search(query: str, top_k: int = 3):
     if not _EMB_INDEX or not _EMB_AVAILABLE:
         return None
     try:
-        # --- USE CACHED MODEL HERE ---
         model = load_embedding_model()
-        
         qvec = model.encode([query], convert_to_numpy=True)[0]
+
         scores = []
         for d in _EMB_INDEX:
             vec = d["vec"]
-            # cosine similarity
-            sim = float(np.dot(qvec, vec) / (np.linalg.norm(qvec) * np.linalg.norm(vec) + 1e-9))
+            sim = float(
+                np.dot(qvec, vec) /
+                (np.linalg.norm(qvec) * np.linalg.norm(vec) + 1e-9)
+            )
             scores.append((sim, d["file"], d["page"], d["text"]))
+
         scores.sort(key=lambda x: x[0], reverse=True)
-        
-        results = scores[:top_k]
-        md = ["> **Answer (embedding search, grounded):**\n"]
-        for sim, file, page, text in results:
-            snippet = text[:300].replace("\n", " ")
-            md.append(f"> - **Source:** {file} | **Page:** {page} | **Score:** {sim:.3f}\n>   > _{snippet}_\n")
-        return "\n".join(md)
+
+        structured_results = []
+        for sim, file, page, text in scores[:top_k]:
+            structured_results.append({
+                "file": file,
+                "page": page,
+                "text": text,
+                "score": sim
+            })
+
+        return structured_results
+
     except Exception:
         return None
 
@@ -220,37 +227,93 @@ def search_pdfs(query: str, top_k: int = 3):
         try:
             emb_res = _emb_search_index(query, top_k=top_k)
             if emb_res:
-                return emb_res
+                pass
+    
         except Exception as e:
             print(f"External Embeddings Engine Failed: {e}")
-
-    # Internal embeddings fallback
-    if _USE_EMB and _EMB_AVAILABLE:
-        emb_res = _emb_search(query, top_k=top_k)
-        if emb_res:
-            return emb_res
 
     # (Keep your token-count fallback here)
     if not _INDEX_LOADED:
         index_pdfs()
     if not _INDEX:
         return None
+    # -------- GET EMBEDDING RESULTS --------
+    emb_results = []
+
+    if _USE_EMB and _EMB_AVAILABLE:
+        emb_res = _emb_search(query, top_k=top_k)
+        if emb_res:
+            emb_results = emb_res
+
+
+    # -------- GET KEYWORD RESULTS --------
     tokens = _tokenize_query(query.strip())
-    if not tokens:
+    kw_results = []
+
+    if tokens:
+        scored = []
+        for doc in _INDEX:
+            txt = doc["text"].lower()
+            score = sum(txt.count(t) for t in tokens)
+
+            if score > 0:
+                scored.append({
+                    "file": doc["file"],
+                    "page": doc["page"],
+                    "text": doc["text"],
+                    "score": float(score)
+                })
+
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        kw_results = scored[:top_k]
+
+# -------- NORMALIZE EMBEDDING SCORES --------
+    if emb_results:
+        emb_scores = [item["score"] for item in emb_results]
+        min_emb = min(emb_scores)
+        max_emb = max(emb_scores)
+
+        for item in emb_results:
+            if max_emb > min_emb:
+                item["score"] = (item["score"] - min_emb) / (max_emb - min_emb)
+            else:
+                item["score"] = 1.0
+
+
+    # -------- NORMALIZE KEYWORD SCORES --------
+    if kw_results:
+        kw_scores = [item["score"] for item in kw_results]
+        min_kw = min(kw_scores)
+        max_kw = max(kw_scores)
+
+        for item in kw_results:
+            if max_kw > min_kw:
+                item["score"] = (item["score"] - min_kw) / (max_kw - min_kw)
+            else:
+                item["score"] = 1.0
+    # -------- HYBRID MERGE --------
+    combined = {}
+
+    for item in emb_results:
+        key = (item["file"], item["page"])
+        combined[key] = item
+
+    for item in kw_results:
+        key = (item["file"], item["page"])
+        if key in combined:
+            alpha = 0.6  # embedding weight
+            beta = 0.4   # keyword weight
+            combined[key]["score"] = alpha * combined[key]["score"] + beta * item["score"]
+        else:
+            combined[key] = item
+
+    if not combined:
         return None
-    scored = []
-    for doc in _INDEX:
-        txt = doc["text"].lower()
-        score = sum(txt.count(t) for t in tokens)
-        if score > 0:
-            first_pos = min((txt.find(t) for t in tokens if txt.find(t) >= 0), default=-1)
-            snippet = doc["text"][first_pos:first_pos+300].replace("\n"," ") if first_pos >= 0 else doc["text"][:200]
-            scored.append((score, doc["file"], doc["page"], snippet))
-    if not scored:
-        return None
-    scored.sort(key=lambda x: x[0], reverse=True)
-    results = scored[:top_k]
-    md_lines = ["> **Answer (grounded snippets):**\n"]
-    for score, file, page, snippet in results:
-        md_lines.append(f"> - **Source:** {file} | **Page:** {page}\n>   > _{snippet.strip()}_\n")
-    return "\n".join(md_lines)
+
+    final_results = sorted(
+        combined.values(),
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+    return final_results[:top_k]
