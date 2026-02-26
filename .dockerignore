@@ -29,3 +29,9 @@ models/*
 .DS_Store
 Thumbs.db
 .vscode/
+
+# --- TTS Agent Dependencies & Temp Files ---
+piper_bin/
+piper_windows.zip
+models/tts/
+temp_audio/
