@@ -389,6 +389,167 @@ def _safe_filename(name: str, default: str) -> str:
     safe = _SAFE_FILENAME_RE.sub("_", base).strip("._")
     return safe or default
 
+
+def _collect_runtime_diagnostics():
+    diagnostics = []
+
+    # OCR engine status
+    if not ENGINES_AVAILABLE:
+        diagnostics.append((
+            "OCR Engine",
+            "❌ Unavailable",
+            "Core engines failed to import.",
+        ))
+    else:
+        try:
+            engines = available_engines()
+            if engines:
+                diagnostics.append((
+                    "OCR Engine",
+                    "✅ Ready",
+                    f"Detected: {', '.join(engines)}",
+                ))
+            else:
+                diagnostics.append((
+                    "OCR Engine",
+                    "⚠️ Limited",
+                    "No OCR backend detected (easyocr/pytesseract).",
+                ))
+        except Exception as ex:
+            diagnostics.append(("OCR Engine", "❌ Error", str(ex)))
+
+    # Law PDF availability
+    law_pdf_dir = "law_pdfs"
+    try:
+        pdf_files = glob.glob(os.path.join(law_pdf_dir, "*.pdf")) if os.path.isdir(law_pdf_dir) else []
+        if pdf_files:
+            diagnostics.append((
+                "Law PDFs",
+                "✅ Available",
+                f"{len(pdf_files)} file(s) found in {law_pdf_dir}.",
+            ))
+        else:
+            diagnostics.append((
+                "Law PDFs",
+                "⚠️ Missing",
+                f"No PDF files found in {law_pdf_dir}.",
+            ))
+    except Exception as ex:
+        diagnostics.append(("Law PDFs", "❌ Error", str(ex)))
+
+    # Mapping DB availability
+    mapping_json = "mapping_db.json"
+    mapping_sqlite = "mapping_db.sqlite"
+    try:
+        json_exists = os.path.exists(mapping_json)
+        sqlite_exists = os.path.exists(mapping_sqlite)
+        if json_exists or sqlite_exists:
+            present = []
+            if json_exists:
+                present.append(mapping_json)
+            if sqlite_exists:
+                present.append(mapping_sqlite)
+            diagnostics.append((
+                "Mapping DB",
+                "✅ Available",
+                f"Detected: {', '.join(present)}",
+            ))
+        else:
+            diagnostics.append((
+                "Mapping DB",
+                "❌ Missing",
+                "No local mapping DB file found.",
+            ))
+    except Exception as ex:
+        diagnostics.append(("Mapping DB", "❌ Error", str(ex)))
+
+    # Embedding / vector DB status
+    try:
+        use_embeddings = os.environ.get("LTA_USE_EMBEDDINGS") == "1"
+        vector_dir = "vector_store"
+        vector_index_path = os.path.join(vector_dir, "faiss.index")
+        vector_meta_path = os.path.join(vector_dir, "meta.txt")
+        vector_index_exists = os.path.exists(vector_index_path) and os.path.exists(vector_meta_path)
+        rag_cache_exists = os.path.exists(os.path.join("law_pdfs", ".rag_index_cache.json"))
+
+        emb_available = False
+        if use_embeddings:
+            try:
+                from engine.embeddings_engine import _EMB_AVAILABLE as emb_available  # type: ignore
+            except Exception:
+                emb_available = False
+
+        if use_embeddings and emb_available and vector_index_exists:
+            diagnostics.append((
+                "Embedding / Vector DB",
+                "✅ Ready",
+                "Embeddings enabled with persisted FAISS index.",
+            ))
+        elif use_embeddings and emb_available and not vector_index_exists:
+            diagnostics.append((
+                "Embedding / Vector DB",
+                "⚠️ Partial",
+                "Embeddings enabled, but vector index not built yet.",
+            ))
+        elif use_embeddings and not emb_available:
+            diagnostics.append((
+                "Embedding / Vector DB",
+                "❌ Unavailable",
+                "Embeddings enabled but dependencies are missing.",
+            ))
+        else:
+            fallback_note = "Keyword/RAG cache available." if rag_cache_exists else "Running in keyword mode."
+            diagnostics.append((
+                "Embedding / Vector DB",
+                "ℹ️ Disabled",
+                fallback_note,
+            ))
+    except Exception as ex:
+        diagnostics.append(("Embedding / Vector DB", "❌ Error", str(ex)))
+
+    # Local LLM configuration status (if enabled)
+    try:
+        ollama_url = os.environ.get("LTA_OLLAMA_URL", "").strip()
+        ollama_model = os.environ.get("LTA_OLLAMA_MODEL", "llama2")
+        if not ollama_url:
+            diagnostics.append((
+                "Local LLM",
+                "ℹ️ Disabled",
+                "LTA_OLLAMA_URL not set.",
+            ))
+        else:
+            llm_detail = f"Configured ({ollama_model}) at {ollama_url}"
+            try:
+                import requests
+
+                resp = requests.get(f"{ollama_url}/api/tags", timeout=2)
+                if resp.ok:
+                    diagnostics.append(("Local LLM", "✅ Reachable", llm_detail))
+                else:
+                    diagnostics.append((
+                        "Local LLM",
+                        "⚠️ Configured",
+                        f"{llm_detail}; service returned HTTP {resp.status_code}.",
+                    ))
+            except Exception as conn_ex:
+                diagnostics.append((
+                    "Local LLM",
+                    "⚠️ Configured",
+                    f"{llm_detail}; not reachable ({conn_ex}).",
+                ))
+    except Exception as ex:
+        diagnostics.append(("Local LLM", "❌ Error", str(ex)))
+
+    return diagnostics
+
+
+def render_diagnostics_panel():
+    with st.expander("System Diagnostics", expanded=False):
+        st.caption("Runtime status for local components")
+        for component, status, detail in _collect_runtime_diagnostics():
+            st.markdown(f"**{component}:** {status}")
+            st.caption(detail)
+
 # render the agent
 def render_agent_audio(audio_path, title="🎙️ AI Agent Dictation"):
     """Wraps the audio player in a premium custom HTML card."""
@@ -528,6 +689,7 @@ with st.sidebar:
             st.session_state.current_page = page
             st.rerun()
     st.markdown('<div class="sidebar-badge">Offline Mode • V1.0</div>', unsafe_allow_html=True)
+    render_diagnostics_panel()
 
 header_links = []
 for page, label in nav_items:
