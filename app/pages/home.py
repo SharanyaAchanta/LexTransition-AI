@@ -1,8 +1,7 @@
 """Home page for LexTransition AI."""
 import streamlit as st
 
-
-def render():
+def render_home_page():
     """Render the Home page."""
     st.markdown('<div class="home-header">', unsafe_allow_html=True)
     st.markdown('<div class="home-title">⚖️ LexTransition AI</div>', unsafe_allow_html=True)

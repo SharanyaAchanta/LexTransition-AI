@@ -1,7 +1,7 @@
 """Privacy Policy page for LexTransition AI."""
+import streamlit as st
 
-
-def render():
+def render_privacy_page():
     """Render the Privacy Policy page."""
     st.markdown("## 🔒 Privacy Policy")
     st.markdown("**Last updated:** February 2025")
