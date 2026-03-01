@@ -259,6 +259,7 @@ def _keyword_search(query: str, top_k: int = 3):
     return results[:top_k]
 
 def search_pdfs(query: str, top_k: int = 3):
+    query = preprocess_query(query)
     """
     Hybrid Retrieval:
     - Runs vector search (if available)
