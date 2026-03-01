@@ -8,6 +8,16 @@ numpy>=1.26.0,<2.0.0
 easyocr>=1.7.1
 pytesseract>=0.3.10
 
+# --- Voice Agent ---
+# piper-tts==1.2.0; sys_platform != 'win32'
+gTTS==2.5.1
+
+# --- Speech Recognition Agent ---
+faster-whisper==1.2.1
+SpeechRecognition==3.10.0
+pydub==0.25.1
+streamlit-mic-recorder
+
 # --- AI/ML (RAG & Embeddings) ---
 sentence-transformers>=2.5.0
 faiss-cpu>=1.8.0
@@ -18,3 +28,6 @@ pandas>=2.0.0
 # --- Testing ---
 pytest>=8.0.0
 reportlab>=4.0.0
+
+psutil
+# audio-file-converter
