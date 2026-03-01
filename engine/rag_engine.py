@@ -12,6 +12,7 @@ import json
 import hashlib
 import streamlit as st
 import numpy as np
+from engine.preprocessing import normalize_query
 
 try:
     import pdfplumber
@@ -212,6 +213,8 @@ def search_pdfs(query: str, top_k: int = 3):
     """
     if not query or not query.strip():
         return None
+    # Normalize user query before retrieval
+    query = normalize_query(query)
     if top_k <= 0:
         return None
 
