@@ -14,6 +14,7 @@ from PIL.Image import item
 import streamlit as st
 import numpy as np
 import logging
+from engine.preprocessing import preprocess_query
 logger = logging.getLogger(__name__)
 
 try:
@@ -200,9 +201,6 @@ def _emb_search(query: str, top_k: int = 3):
     if not _EMB_INDEX or not _EMB_AVAILABLE:
         return None
     try:
-        # --- USE CACHED MODEL HERE ---
-        model = load_embedding_model()
-        
         # --- USE CACHED MODEL HERE ---
         model = load_embedding_model()
         
