@@ -200,19 +200,22 @@ def _emb_search(query: str, top_k: int = 3):
     if not _EMB_INDEX or not _EMB_AVAILABLE:
         return None
     try:
-        # --- USE CACHED MODEL HERE ---
         model = load_embedding_model()
         
         # --- USE CACHED MODEL HERE ---
         model = load_embedding_model()
         
         qvec = model.encode([query], convert_to_numpy=True)[0]
+
         scores = []
         for d in _EMB_INDEX:
             vec = d["vec"]
-            # cosine similarity
-            sim = float(np.dot(qvec, vec) / (np.linalg.norm(qvec) * np.linalg.norm(vec) + 1e-9))
+            sim = float(
+                np.dot(qvec, vec) /
+                (np.linalg.norm(qvec) * np.linalg.norm(vec) + 1e-9)
+            )
             scores.append((sim, d["file"], d["page"], d["text"]))
+
         scores.sort(key=lambda x: x[0], reverse=True)
         
         
@@ -280,15 +283,10 @@ def search_pdfs(query: str, top_k: int = 3):
         try:
             emb_res = _emb_search_index(query, top_k=top_k)
             if emb_res:
-                return emb_res
+                pass
+    
         except Exception as e:
             logger.error(f"External Embeddings Engine Failed: {e}")
-
-    # Internal embeddings fallback
-    if _USE_EMB and _EMB_AVAILABLE:
-        emb_res = _emb_search(query, top_k=top_k)
-        if emb_res:
-            return emb_res
 
     # (Keep your token-count fallback here)
     # (Keep your token-count fallback here)
@@ -297,6 +295,16 @@ def search_pdfs(query: str, top_k: int = 3):
         index_pdfs()
     if not _INDEX:
         return None
+    # -------- GET EMBEDDING RESULTS --------
+    emb_results = []
+
+    if _USE_EMB and _EMB_AVAILABLE:
+        emb_res = _emb_search(query, top_k=top_k)
+        if emb_res:
+            emb_results = emb_res
+
+
+    # -------- GET KEYWORD RESULTS --------
     tokens = _tokenize_query(query.strip())
     if not tokens:
         return None
