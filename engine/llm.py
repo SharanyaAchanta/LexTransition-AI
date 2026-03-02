@@ -66,7 +66,8 @@ def summarize(text: str, question: Optional[str] = None) -> str:
         except AITimeoutError:
             raise  # Let app.py handle UI message
 
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.error(f"LLM summarize failed: {e}")
 
     return _extractive_summary(text)

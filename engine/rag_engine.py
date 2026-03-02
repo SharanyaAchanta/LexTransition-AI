@@ -93,8 +93,9 @@ def _load_cache(dir_path: str):
             data = json.load(f)
         if isinstance(data, dict) and isinstance(data.get("files"), dict):
             return data
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to load cache from {path}: {e}")
     return {"files": {}}
 
 def _save_cache(dir_path: str, cache: dict):
