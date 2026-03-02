@@ -27,6 +27,9 @@ pandas>=2.0.0
 
 # --- Testing ---
 pytest>=8.0.0
+pytest-cov>=4.1.0
+flake8>=7.0.0
+black>=24.2.0
 reportlab>=4.0.0
 
 psutil
