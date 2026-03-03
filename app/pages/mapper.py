@@ -190,6 +190,19 @@ placeholder="Add your personal notes here..."
         
         st.write("###")
 
+        # ===== Context Memory Buttons =====
+        col_ctx1, col_ctx2 = st.columns(2)
+        
+        with col_ctx1:
+            if st.button("📥 Use in Fact Checker"):
+                st.session_state.context_memory = f"IPC {ipc} mapped to {bns}. Notes: {notes}"
+                st.success("Stored in memory. Go to Fact Checker.")
+        
+        with col_ctx2:
+            if st.button("🧹 Clear Memory"):
+                st.session_state.context_memory = ""
+                st.info("Context cleared.")
+
         # --- STEP 3: Action Buttons ---
         col_a, col_b, col_c, col_d = st.columns(4)
         
