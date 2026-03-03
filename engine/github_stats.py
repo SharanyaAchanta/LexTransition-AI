@@ -2,6 +2,7 @@ import requests
 import streamlit as st
 from datetime import datetime, timedelta
 
+@st.cache_data(ttl=3600) 
 def get_github_stats(repo_full_name="SharanyaAchanta/LexTransition-AI"):
     """
     Fetches GitHub repository statistics with caching to respect rate limits.
@@ -56,6 +57,7 @@ def get_github_stats(repo_full_name="SharanyaAchanta/LexTransition-AI"):
         print(f"Error fetching GitHub stats: {e}")
         return stats
 
+@st.cache_data(ttl=3600)
 def get_github_contributors(repo_full_name="SharanyaAchanta/LexTransition-AI"):
     """
     Fetches GitHub repository contributors with caching.

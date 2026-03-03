@@ -1,13 +1,10 @@
-"""Sidebar navigation component for LexTransition AI."""
 import streamlit as st
-from app.config import NAV_ITEMS
 
-
-def render_sidebar():
-    """Render the sidebar navigation for mobile."""
+def render_sidebar(nav_items):
+    """Renders the mobile sidebar navigation."""
     with st.sidebar:
         st.markdown('<div class="sidebar-title">LexTransition AI</div>', unsafe_allow_html=True)
-        for page, label in NAV_ITEMS:
+        for page, label in nav_items:
             if st.button(label, key=f"side_{page}", use_container_width=True):
                 st.session_state.current_page = page
                 st.rerun()

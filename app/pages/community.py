@@ -3,7 +3,7 @@ import streamlit as st
 from engine.github_stats import get_github_stats
 
 
-def render():
+def render_community_page():
     """Render the Community Hub page."""
     st.markdown("## 🤝 Community Hub")
     st.markdown("Join us in building the future of offline legal technology in India.")

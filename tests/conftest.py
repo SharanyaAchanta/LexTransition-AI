@@ -11,10 +11,15 @@ def pytest_configure() -> None:
     if root_str not in sys.path:
         sys.path.insert(0, root_str)
     
-    # Mock streamlit before any engine imports to avoid cache_resource issues in tests
+    # Ensure Streamlit cache decorators are always no-ops during tests,
+    # whether streamlit is installed or not.
     if "streamlit" not in sys.modules:
         mock_st = MagicMock()
-        # Make cache_resource a pass-through decorator
         mock_st.cache_resource = lambda *args, **kwargs: (lambda fn: fn)
+        mock_st.cache_data = lambda *args, **kwargs: (lambda fn: fn)
         sys.modules["streamlit"] = mock_st
+    else:
+        import streamlit as st
+        st.cache_data = lambda *args, **kwargs: (lambda fn: fn)
+        st.cache_resource = lambda *args, **kwargs: (lambda fn: fn)
 

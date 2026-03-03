@@ -64,7 +64,3 @@ def execute_intent(parsed_data: dict, text_query: str):
     
     else:
         return "🤷‍♂️ No actionable intent recognized. Proceeding with standard search."
-    
-    for query in test_queries:
-        parsed = parse_intent(query)
-        print(execute_intent(parsed, query))

@@ -2,8 +2,8 @@
 from app.components.header import render_header
 from app.components.sidebar import render_sidebar
 from app.components.footer import render_footer
-from app.components.theme import init_theme, toggle_theme, render_theme_toggle, apply_theme
-from app.components.tts_helper import render_agent_audio, generate_tts_and_play
+from app.components.theme import init_theme, toggle_theme, apply_theme_css, load_css
+from app.components.ui_helpers import render_agent_audio, copy_to_clipboard
 
 __all__ = [
     "render_header",
@@ -11,8 +11,8 @@ __all__ = [
     "render_footer",
     "init_theme",
     "toggle_theme",
-    "render_theme_toggle",
-    "apply_theme",
+    "apply_theme_css",
+    "load_css",
     "render_agent_audio",
-    "generate_tts_and_play",
+    "copy_to_clipboard",
 ]
