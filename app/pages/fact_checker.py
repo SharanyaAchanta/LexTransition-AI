@@ -54,9 +54,14 @@ def render_fact_checker_page():
     
     with col1:
         # Bind the value to our session state so Voice Input auto-fills this box
+        default_question = (
+            st.session_state.get("context_memory", "")
+            or st.session_state.get("fact_search_val", "")
+        )
+        
         user_question = st.text_input(
-            "Question", 
-            value=st.session_state.get('fact_search_val', ''),
+            "Question",
+            value=default_question,
             placeholder="e.g., penalty for cheating?",
             label_visibility="collapsed"
         )
@@ -104,7 +109,20 @@ def render_fact_checker_page():
             st.session_state['fact_search_val'] = voice_query
             st.session_state['fact_auto_search'] = True 
             st.rerun()
-
+    # ===== Show Context Memory =====
+    if st.session_state.get("context_memory"):
+        col_m1, col_m2 = st.columns(2)
+    
+        with col_m1:
+            st.info("📌 Using stored context")
+    
+        with col_m2:
+            if st.button("🧹 Clear Memory"):
+                st.session_state.context_memory = ""
+                st.rerun()
+    
+        with st.expander("📌 Stored Context"):
+            st.write(st.session_state.context_memory)
     # --- Auto-Search Trigger ---
     if st.session_state.get('fact_auto_search'):
         verify_btn = True
