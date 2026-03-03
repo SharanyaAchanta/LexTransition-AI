@@ -26,14 +26,16 @@ def available_engines() -> List[str]:
         import easyocr
         import easyocr
         engines.append("easyocr")
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.warning(f"EasyOCR not available: {e}")
     try:
         import pytesseract
         import pytesseract
         engines.append("pytesseract")
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.warning(f"Pytesseract not available: {e}")
     return engines
 
 def extract_text(file_bytes: bytes) -> str:
