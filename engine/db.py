@@ -5,12 +5,13 @@ Provides database operations including initialization, CRUD operations,
 import/export functionality, and migration from JSON.
 """
 
+import functools
 import sqlite3
 import json
 import os
 import shutil
-import logging
-logger = logging.getLogger(__name__)
+from utils.logger import get_logger
+logger = get_logger(__name__)
 import pandas as pd
 import streamlit as st
 from datetime import datetime, timezone
@@ -20,8 +21,24 @@ from pathlib import Path
 from engine import db_utils
 
 _base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-_DB_FILE = os.path.join(_base_dir, "mapping_db.sqlite")
-_JSON_FILE = os.path.join(_base_dir, "mapping_db.json")
+_DB_FILE = os.environ.get("LTA_MAPPING_DB_SQLITE") or os.path.join(_base_dir, "mapping_db.sqlite")
+_JSON_FILE = os.environ.get("LTA_MAPPING_DB_JSON") or os.path.join(_base_dir, "mapping_db.json")
+
+def _optional_cache(ttl=3600):
+    """Apply @st.cache_data only when running inside Streamlit."""
+    def decorator(fn):
+        try:
+            cached = st.cache_data(ttl=ttl)(fn)
+        except Exception:
+            return fn
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return cached(*args, **kwargs)
+            except Exception:
+                return fn(*args, **kwargs)
+        return wrapper
+    return decorator
 
 def _clear_db_cache():
     """Clear Streamlit database cache."""
@@ -193,7 +210,7 @@ def insert_mapping(ipc_section: str, bns_section: str,
         if conn is not None:
             conn.close()
 
-@st.cache_data(ttl=3600)
+@_optional_cache(ttl=3600)
 def get_mapping(ipc_section: str) -> Optional[Dict]:
     """Get a single mapping by IPC section."""
     try:
@@ -220,12 +237,20 @@ def get_mapping(ipc_section: str) -> Optional[Dict]:
         logger.error(f"Error getting mapping: {e}")
         return None
 
-@st.cache_data(ttl=3600)
+@_optional_cache(ttl=3600)
 def get_all_mappings() -> Dict[str, Dict]:
     """Get all mappings as a dictionary."""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Check if table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='mappings'")
+        if not cursor.fetchone():
+            conn.close()
+            initialize_db()
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
         cursor.execute("SELECT * FROM mappings")
         rows = cursor.fetchall()
@@ -247,7 +272,7 @@ def get_all_mappings() -> Dict[str, Dict]:
         logger.error(f"Error getting all mappings: {e}")
         return {}
 
-@st.cache_data(ttl=3600)
+@_optional_cache(ttl=3600)
 def get_mappings_by_category(category: str) -> Dict[str, Dict]:
     """Get mappings by category."""
     try:
@@ -274,7 +299,7 @@ def get_mappings_by_category(category: str) -> Dict[str, Dict]:
         logger.error(f"Error getting mappings by category: {e}")
         return {}
 
-@st.cache_data(ttl=3600)
+@_optional_cache(ttl=3600)
 def get_categories() -> List[str]:
     """Get all unique categories."""
     try:
@@ -291,7 +316,7 @@ def get_categories() -> List[str]:
         logger.error(f"Error getting categories: {e}")
         return []
 
-@st.cache_data(ttl=3600)
+@_optional_cache(ttl=3600)
 def get_mapping_count() -> int:
     """Get total number of mappings."""
     try:
@@ -308,7 +333,7 @@ def get_mapping_count() -> int:
         logger.error(f"Error getting mapping count: {e}")
         return 0
 
-@st.cache_data(ttl=3600)
+@_optional_cache(ttl=3600)
 def get_metadata() -> Dict:
     """Get metadata from database."""
     try:
