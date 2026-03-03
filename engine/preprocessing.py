@@ -1,20 +1,11 @@
-import re
-
-def normalize_query(query: str) -> str:
+def preprocess_query(query: str) -> str:
     """
-    Normalize user query before retrieval:
-    - Lowercase conversion
-    - Remove unnecessary punctuation
-    - Remove extra whitespace
+    Basic query preprocessing:
+    - Lowercases text
+    - Strips extra whitespace
     """
+    if not query:
+        return ""
 
-    # Convert to lowercase
-    query = query.lower()
-
-    # Remove punctuation (keep alphanumeric and spaces)
-    query = re.sub(r"[^\w\s]", "", query)
-
-    # Remove extra whitespace
-    query = re.sub(r"\s+", " ", query).strip()
-
+    query = query.lower().strip()
     return query

@@ -14,6 +14,7 @@ from PIL.Image import item
 import streamlit as st
 import numpy as np
 import logging
+from engine.preprocessing import preprocess_query
 logger = logging.getLogger(__name__)
 
 try:
@@ -202,9 +203,6 @@ def _emb_search(query: str, top_k: int = 3):
     try:
         model = load_embedding_model()
         
-        # --- USE CACHED MODEL HERE ---
-        model = load_embedding_model()
-        
         qvec = model.encode([query], convert_to_numpy=True)[0]
 
         scores = []
@@ -262,6 +260,7 @@ def _keyword_search(query: str, top_k: int = 3):
     return results[:top_k]
 
 def search_pdfs(query: str, top_k: int = 3):
+    query = preprocess_query(query)
     """
     Hybrid Retrieval:
     - Runs vector search (if available)
