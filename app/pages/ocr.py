@@ -69,6 +69,9 @@ Failure to comply may result in legal action.
 
                 st.success("✅ Text extraction completed!")
                 st.text_area("Extracted Text", extracted, height=300)
+                if st.button("📥 Use in Fact Checker"):
+                st.session_state.context_memory = extracted
+                st.success("OCR text stored for reuse.")
 
                 copy_to_clipboard(extracted, "Copy OCR Text")
                 
