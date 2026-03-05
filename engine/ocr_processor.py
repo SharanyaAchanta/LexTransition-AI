@@ -1,3 +1,4 @@
+
 """
 Simple OCR helper with availability checks.
 Functions:
@@ -7,9 +8,10 @@ Functions:
 """
 import io
 import logging
-logger = logging.getLogger(__name__)
-import streamlit as st
 from typing import Any, Dict, List
+import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 # Load the cached model
 @st.cache_resource(show_spinner=False)
@@ -18,18 +20,16 @@ def load_easyocr_reader() -> Any:
     logger.info("Loading OCR Model into Memory...")
     import easyocr
     # gpu=False ensures it runs safely on CPU-only machines/containers
-    return easyocr.Reader(["en"], gpu=False) 
+    return easyocr.Reader(["en"], gpu=False)
 
 def available_engines() -> List[str]:
     engines = []
     try:
         import easyocr
-        import easyocr
         engines.append("easyocr")
     except Exception:
         pass
     try:
-        import pytesseract
         import pytesseract
         engines.append("pytesseract")
     except Exception:
@@ -40,22 +40,14 @@ def extract_text(file_bytes: bytes) -> str:
     # Try EasyOCR first
     try:
         from PIL import Image
-        # Get the cached model
-        reader = load_easyocr_reader()
-        from PIL import Image
-        # Get the cached model
         reader = load_easyocr_reader()
         image = Image.open(io.BytesIO(file_bytes))
         result = reader.readtext(image)
         return " ".join([r[1] for r in result])
     except Exception as e:
-        # 👇 ADD THIS PRINT STATEMENT
-        logger.error(f"EasyOCR Failed: {e}") 
-        
+        logger.error(f"EasyOCR Failed: {e}")
         # Fallback to pytesseract
         try:
-            import pytesseract
-            from PIL import Image
             import pytesseract
             from PIL import Image
             image = Image.open(io.BytesIO(file_bytes))

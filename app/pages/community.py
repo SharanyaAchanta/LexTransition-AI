@@ -1,6 +1,6 @@
 """Community Hub page for LexTransition AI."""
 import streamlit as st
-from engine.github_stats import get_github_stats
+from engine.github_integration import get_github_stats
 
 
 def render_community_page():

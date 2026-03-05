@@ -1,3 +1,31 @@
+def compute_confidence(scores: list, score_type: str = "embedding") -> float:
+    """
+    Compute a retrieval confidence score (0-1) based on top-K scores, variance, and rank gap.
+    Args:
+        scores: List of floats (top-K scores)
+        score_type: 'embedding' or 'keyword' (for normalization)
+    Returns:
+        Confidence value between 0 and 1
+    """
+    import numpy as np
+    if not scores or len(scores) == 0:
+        return 0.0
+    scores = np.array(scores, dtype=float)
+    # Normalize scores to [0,1] if not already
+    if score_type == "embedding":
+        # Embedding similarities are typically in [-1,1], normalize to [0,1]
+        norm_scores = (scores + 1) / 2
+    else:
+        # Keyword scores: normalize by max in top-K
+        max_score = np.max(scores)
+        norm_scores = scores / max_score if max_score > 0 else scores
+    avg = np.mean(norm_scores)
+    var = np.var(norm_scores)
+    gap = norm_scores[0] - norm_scores[1] if len(norm_scores) > 1 else norm_scores[0]
+    # Weighted sum: avg (0.5), gap (0.3), low variance (0.2)
+    confidence = 0.5 * avg + 0.3 * gap + 0.2 * (1 - var)
+    # Clamp to [0,1]
+    return float(np.clip(confidence, 0, 1))
 """
 Tiny RAG-like engine: PDF ingestion -> page-level search -> grounded citations.
 Usage:
@@ -296,12 +324,12 @@ def search_pdfs(query: str, top_k: int = 3):
         return None
     # -------- GET EMBEDDING RESULTS --------
     emb_results = []
-
+    emb_scores = []
     if _USE_EMB and _EMB_AVAILABLE:
         emb_res = _emb_search(query, top_k=top_k)
         if emb_res:
             emb_results = emb_res
-
+            emb_scores = [r["vector_score"] for r in emb_results]
 
     # -------- GET KEYWORD RESULTS --------
     tokens = _tokenize_query(query.strip())
@@ -325,10 +353,29 @@ def search_pdfs(query: str, top_k: int = 3):
         return None
     scored.sort(key=lambda x: x[0], reverse=True)
     results = scored[:top_k]
+    keyword_scores = [s[0] for s in results]
+
+    # --- Compute confidence ---
+    emb_conf = compute_confidence(emb_scores, score_type="embedding") if emb_scores else 0.0
+    kw_conf = compute_confidence(keyword_scores, score_type="keyword") if keyword_scores else 0.0
+    # Hybrid: weighted average if both available, else use whichever exists
+    if emb_scores and keyword_scores:
+        confidence = 0.6 * emb_conf + 0.4 * kw_conf
+    elif emb_scores:
+        confidence = emb_conf
+    else:
+        confidence = kw_conf
+
+    # --- Return structured result ---
     md_lines = ["> **Answer (grounded snippets):**\n"]
     for score, file, page, snippet, start_offset, end_offset in results:
         md_lines.append(
             f"> - **Source:** {file} | **Page:** {page} | **Offsets:** {start_offset}-{end_offset}\n"
             f">   > _{snippet.strip()}_\n"
         )
-    return "\n".join(md_lines)
+    return {
+        "answer_markdown": "\n".join(md_lines),
+        "confidence": confidence,
+        "embedding_scores": emb_scores,
+        "keyword_scores": keyword_scores
+    }
