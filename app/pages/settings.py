@@ -1,7 +1,6 @@
 """Settings page for LexTransition AI."""
 import streamlit as st
-from engine.system_status import get_system_status
-from engine.resource_monitor import get_resource_usage
+from engine.system_monitor import get_system_status, get_resource_usage
 
 def render_settings_page():
     """Render the Settings/About page.
