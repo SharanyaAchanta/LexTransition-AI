@@ -50,7 +50,9 @@ def render_ocr_page():
                 st.stop()
 
             if not ENGINES_AVAILABLE:
-                st.error("❌ OCR Engine not available.")
+                st.error("❌ OCR Engine not available.\n\n**Troubleshooting:**\n- Ensure required OCR dependencies (easyocr, pytesseract, tesseract binary) are installed.\n- Restart the app after installing dependencies.\n- Check if your environment supports OCR engines.\n")
+                if st.button("🔄 Retry", use_container_width=True):
+                    st.experimental_rerun()
                 st.stop()
 
             try:
@@ -76,12 +78,17 @@ Failure to comply may result in legal action.
                         filename = getattr(uploaded_file, 'name', 'uploaded_file')
                         result = results.get(filename, {})
                         if result.get('status') == 'error':
-                            st.error(f"❌ OCR failed: {result.get('error', 'Unknown error')}")
+                            err_msg = result.get('error', 'Unknown error')
+                            st.error(f"❌ OCR failed: {err_msg}\n\n**Troubleshooting:**\n- Check if the uploaded file is a valid image.\n- Ensure OCR dependencies are installed.\n- If using pytesseract, verify tesseract is installed and in PATH.\n- Try uploading a different file.\n")
+                            if st.button("🔄 Retry", use_container_width=True):
+                                st.experimental_rerun()
                             st.stop()
                         extracted = result.get('text', '')
 
                     if not extracted or not extracted.strip():
-                        st.warning("⚠ No text detected in the uploaded image.")
+                        st.warning("⚠ No text detected in the uploaded image.\n\n**Troubleshooting:**\n- Ensure the image contains readable text.\n- Try increasing image quality or contrast.\n- Try a different file.")
+                        if st.button("🔄 Retry", use_container_width=True):
+                            st.experimental_rerun()
                         st.stop()
 
                     st.success("✅ Text extraction completed!")
@@ -112,7 +119,9 @@ Failure to comply may result in legal action.
                             st.write("**Detected Sections:** None")
                         st.info(f"**Guidance:** {guidance}")
                     except Exception as e:
-                        st.error(f"❌ Legal risk analysis failed: {str(e)}")
+                        st.error(f"❌ Legal risk analysis failed: {str(e)}\n\n**Troubleshooting:**\n- Ensure the extracted text is not empty or corrupted.\n- Check if the risk analyzer engine is available.\n- Try re-running the analysis.")
+                        if st.button("🔄 Retry Legal Risk Analysis", use_container_width=True):
+                            st.experimental_rerun()
 
                     # ================= BAIL ANALYSIS =================
                     try:
@@ -130,7 +139,9 @@ Failure to comply may result in legal action.
                                 st.write(f"Punishment: {item['punishment']}")
                                 st.divider()
                     except Exception as e:
-                        st.error(f"❌ Bail analysis failed: {str(e)}")
+                        st.error(f"❌ Bail analysis failed: {str(e)}\n\n**Troubleshooting:**\n- Ensure the extracted text is valid.\n- Check if the bail analyzer engine is available.\n- Try re-running the analysis.")
+                        if st.button("🔄 Retry Bail Analysis", use_container_width=True):
+                            st.experimental_rerun()
 
                     # ================= DEADLINE ANALYSIS =================
                     try:
@@ -148,7 +159,9 @@ Failure to comply may result in legal action.
                                     st.write(f"{item['date']} — Detected")
                             st.divider()
                     except Exception as e:
-                        st.error(f"❌ Deadline analysis failed: {str(e)}")
+                        st.error(f"❌ Deadline analysis failed: {str(e)}\n\n**Troubleshooting:**\n- Ensure the extracted text is valid.\n- Check if the deadline extractor engine is available.\n- Try re-running the analysis.")
+                        if st.button("🔄 Retry Deadline Analysis", use_container_width=True):
+                            st.experimental_rerun()
 
                     # ================= PLAIN LANGUAGE SUMMARY =================
                     try:
@@ -165,7 +178,9 @@ Failure to comply may result in legal action.
                                     st.write(f"- {point}")
                             st.info(summary_data.get("plain_summary", ""))
                     except Exception as e:
-                        st.error(f"❌ Summary generation failed: {str(e)}")
+                        st.error(f"❌ Summary generation failed: {str(e)}\n\n**Troubleshooting:**\n- Ensure the extracted text is valid.\n- Check if the summarizer engine is available.\n- Try re-running the analysis.")
+                        if st.button("🔄 Retry Summary Generation", use_container_width=True):
+                            st.experimental_rerun()
 
                     try:
                         with st.spinner("🤖 Generating action items..."):
@@ -180,6 +195,10 @@ Failure to comply may result in legal action.
                         else:
                             st.warning("⚠ AI Engine failed to generate summary.")
                     except Exception as e:
-                        st.error(f"❌ AI summary/voice failed: {str(e)}")
+                        st.error(f"❌ AI summary/voice failed: {str(e)}\n\n**Troubleshooting:**\n- Ensure the extracted text is valid.\n- Check if the LLM or TTS engine is available.\n- Try re-running the analysis.")
+                        if st.button("🔄 Retry AI Summary/Voice", use_container_width=True):
+                            st.experimental_rerun()
                 except Exception as e:
-                    st.error(f"❌ Error during processing: {str(e)}")
+                    st.error(f"❌ Error during processing: {str(e)}\n\n**Troubleshooting:**\n- Check your file and try again.\n- Ensure all required dependencies are installed.\n- Restart the app if the problem persists.")
+                    if st.button("🔄 Retry Processing", use_container_width=True):
+                        st.experimental_rerun()
