@@ -6,11 +6,9 @@ import os
 from app.components.ui_helpers import copy_to_clipboard, render_agent_audio
 from engine.tts_handler import tts_engine
 
-# OCR Specific Engines
-from engine.risk_analyzer import analyze_risk
-from engine.bail_analyzer import analyze_bail
-from engine.summarizer import generate_summary
-from engine.deadline_extractor import analyze_deadlines
+
+# Universal OCR Summarizer
+from engine.ocr_summarizer import summarize_with_prompt
 
 # --- SELF-CONTAINED ENGINE CHECK ---
 try:
@@ -97,11 +95,11 @@ Failure to comply may result in legal action.
 
                     # ================= RISK ANALYSIS =================
                     try:
-                        risk_result = analyze_risk(extracted)
+                        risk_result = summarize_with_prompt(extracted, prompt_type="risk")
                         st.markdown("### ⚠️ Legal Risk Assessment")
-                        severity = risk_result["severity"]
-                        sections = risk_result["sections"]
-                        guidance = risk_result["guidance"]
+                        severity = risk_result.get("severity", "Unknown")
+                        sections = risk_result.get("sections", [])
+                        guidance = risk_result.get("guidance", "")
                         punishments = risk_result.get("punishment", [])
                         if punishments:
                             st.markdown("### ⚖️ Possible Punishment")
@@ -125,18 +123,18 @@ Failure to comply may result in legal action.
 
                     # ================= BAIL ANALYSIS =================
                     try:
-                        bail_results = analyze_bail(extracted)
+                        bail_results = summarize_with_prompt(extracted, prompt_type="bail")
                         if bail_results:
                             st.markdown("### ⚖️ Bail Eligibility & Procedure")
                             for item in bail_results:
-                                st.write(f"**Section {item['section']} — {item['description']}**")
-                                if item["bailable"] == "Non-bailable":
+                                st.write(f"**Section {item.get('section', '')} — {item.get('description', '')}**")
+                                if item.get("bailable", "") == "Non-bailable":
                                     st.error("🔴 Non-bailable")
                                 else:
                                     st.success("🟢 Bailable")
-                                st.write(f"Cognizable: {item['cognizable']}")
-                                st.info(f"Procedure: {item['procedure']}")
-                                st.write(f"Punishment: {item['punishment']}")
+                                st.write(f"Cognizable: {item.get('cognizable', '')}")
+                                st.info(f"Procedure: {item.get('procedure', '')}")
+                                st.write(f"Punishment: {item.get('punishment', '')}")
                                 st.divider()
                     except Exception as e:
                         st.error(f"❌ Bail analysis failed: {str(e)}\n\n**Troubleshooting:**\n- Ensure the extracted text is valid.\n- Check if the bail analyzer engine is available.\n- Try re-running the analysis.")
@@ -145,18 +143,20 @@ Failure to comply may result in legal action.
 
                     # ================= DEADLINE ANALYSIS =================
                     try:
-                        deadline_results = analyze_deadlines(extracted)
+                        deadline_results = summarize_with_prompt(extracted, prompt_type="deadline")
                         if deadline_results:
                             st.markdown("### 📅 Important Dates & Deadlines")
                             for item in deadline_results:
-                                if item["status"] == "Expired":
-                                    st.error(f"❌ {item['date']} — Expired")
-                                elif item["status"] == "Urgent":
-                                    st.warning(f"⚠ {item['date']} — Urgent")
-                                elif item["status"] == "Upcoming":
-                                    st.info(f"📌 {item['date']} — Upcoming")
+                                status = item.get("status", "")
+                                date = item.get("date", "")
+                                if status == "Expired":
+                                    st.error(f"❌ {date} — Expired")
+                                elif status == "Urgent":
+                                    st.warning(f"⚠ {date} — Urgent")
+                                elif status == "Upcoming":
+                                    st.info(f"📌 {date} — Upcoming")
                                 else:
-                                    st.write(f"{item['date']} — Detected")
+                                    st.write(f"{date} — Detected")
                             st.divider()
                     except Exception as e:
                         st.error(f"❌ Deadline analysis failed: {str(e)}\n\n**Troubleshooting:**\n- Ensure the extracted text is valid.\n- Check if the deadline extractor engine is available.\n- Try re-running the analysis.")
@@ -165,7 +165,7 @@ Failure to comply may result in legal action.
 
                     # ================= PLAIN LANGUAGE SUMMARY =================
                     try:
-                        summary_data = generate_summary(extracted)
+                        summary_data = summarize_with_prompt(extracted, prompt_type="summary")
                         st.markdown("### 📝 Plain-Language Explanation")
                         if summary_data:
                             if summary_data.get("sections"):
